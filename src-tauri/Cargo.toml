@@ -1,0 +1,26 @@
+[package]
+name = "gaze-calibration-card"
+version = "0.1.0"
+description = "A private, vendor-neutral gaze reliability check"
+authors = ["Sociobot"]
+license = "MIT"
+repository = "https://github.com/B-Divyesh/sf-gaze-calibration-card"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "gaze_calibration_card_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
