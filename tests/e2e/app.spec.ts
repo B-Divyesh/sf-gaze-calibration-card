@@ -10,6 +10,9 @@ test("setup is accessible and has no console errors", async ({ page }) => {
   await expect(page.locator("h1")).toHaveCount(1);
   const results = await new AxeBuilder({ page: page as never }).analyze();
   expect(results.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
+  await page.emulateMedia({ colorScheme: "dark" });
+  const darkResults = await new AxeBuilder({ page: page as never }).analyze();
+  expect(darkResults.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
   expect(errors).toEqual([]);
 });
 
