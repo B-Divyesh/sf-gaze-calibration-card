@@ -1,0 +1,15 @@
+{
+  "slug": "gaze-calibration-card",
+  "title": "Gaze Calibration Card",
+  "artifact_class": "desktop-app",
+  "job_to_be_done": "Help a person relying on eye input quickly decide whether their changing posture, wheelchair position, glasses, light, or fatigue has made gaze control unreliable before a frustrating interaction.",
+  "smallest_useful_product": "A local 30-second nine-target check with directional error, dwell reliability, user-approved setup notes, local history, and support-friendly export.",
+  "constraints": [
+    "Camera frames stay local; this implementation does not request camera access.",
+    "Measurements are device-dependent and not diagnostic.",
+    "Keyboard-only setup and high contrast are supported.",
+    "No cursor control, cloud analytics, or replacement for vendor calibration."
+  ],
+  "monetization": "free",
+  "source": "Factory work order gaze-calibration-card-build-1"
+}

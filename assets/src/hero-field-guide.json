@@ -1,0 +1,10 @@
+{
+  "asset": "hero-field-guide-v2.png",
+  "status": "selected",
+  "generated_at": "2026-08-28",
+  "model": "factory-image via /opt/fleet/lib/gen-image.sh",
+  "size": "1536x1024",
+  "quality": "high",
+  "prompt": "Top-down archival botanical field-guide plate on warm deckled paper. A single graceful pressed fern frond curves around a complete calibration arrangement of EXACTLY NINE small copper-gold round seed specimens. The nine seeds must be plainly visible and separated, in exactly three complete horizontal rows with exactly three seeds in each row, a clear 3 by 3 matrix: 3 top, 3 middle, 3 bottom. Faint graphite sight lines and tiny registration dots suggest careful measurement. Flatbed-scanner clarity with soft raking daylight, dry ink and tactile paper fibers, deep forest green and pollen-gold restrained palette, generous quiet negative space, elegant editorial still life. no additional fruit or seeds, no missing positions, no people, no eyes, no faces, no medical devices, no interface screenshot, no text, no letters, no numbers, no logo, no watermark, no gradient, no neon, no glossy 3D.",
+  "review": "Accepted: exactly nine separate specimens, coherent 3x3 grid, clean botanical material, no text, brands, people, anatomy issues, or misleading UI. First candidate rejected for containing only eight specimens."
+}
