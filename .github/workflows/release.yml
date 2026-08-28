@@ -42,7 +42,7 @@ jobs:
       - run: npm ci
       - uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.FACTORY_RELEASE_TOKEN }}
         with:
           tagName: v__VERSION__
           releaseName: Gaze Calibration Card v__VERSION__
@@ -68,7 +68,7 @@ jobs:
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
       - name: Download release assets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.FACTORY_RELEASE_TOKEN }}
         run: gh release download "${{ steps.version.outputs.tag }}" --dir release-assets
       - name: Write checksums and latest manifest
         run: |
@@ -78,6 +78,8 @@ jobs:
           node tools/make-release-manifest.mjs release-assets "${{ steps.version.outputs.value }}" "$GITHUB_REPOSITORY"
       - name: Publish manifest and checksums
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.FACTORY_RELEASE_TOKEN }}
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           files: |
