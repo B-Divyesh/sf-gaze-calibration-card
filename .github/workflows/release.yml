@@ -4,12 +4,19 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      metadata_only:
+        description: Rebuild checksums and latest.json from an existing release
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 jobs:
   build:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.metadata_only != true }}
     strategy:
       fail-fast: false
       matrix:
@@ -56,6 +63,7 @@ jobs:
 
   manifest:
     needs: build
+    if: ${{ always() && (needs.build.result == 'success' || inputs.metadata_only == true) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -83,3 +91,4 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           files: release-assets/*
+          token: ${{ secrets.FACTORY_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
