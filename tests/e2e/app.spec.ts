@@ -26,3 +26,22 @@ test("keyboard-only user can complete a practice check", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Keyboard path complete" })).toBeVisible();
   await expect(page.getByText(/No gaze reliability score/)).toBeVisible();
 });
+
+test("pointer check produces and exports a measured result", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Desktop pointer path is the representative gaze-controlled cursor path.");
+  await page.goto("/");
+  await page.getByText("Mouse or touch", { exact: true }).click();
+  await page.getByRole("button", { name: "Prepare the check" }).click();
+  await page.getByRole("button", { name: "Start nine-point check" }).click();
+  for (let index = 1; index <= 9; index += 1) {
+    const target = page.getByRole("button", { name: `Target ${index} of 9` });
+    await target.hover();
+    await page.waitForTimeout(700);
+    await target.click();
+  }
+  await expect(page.getByRole("heading", { name: "Reliable for use" })).toBeVisible();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export support report" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^gaze-check-.*\.html$/);
+});

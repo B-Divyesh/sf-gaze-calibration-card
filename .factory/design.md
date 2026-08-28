@@ -40,14 +40,14 @@ All body/color pairings meet 4.5:1; state always includes wording or symbols, ne
 ## Interaction grammar
 
 - **Observe → mark → interpret.** Setup gathers the input method and optional circumstance notes. The check presents one large target at a time. Results reveal a nine-cell map, directional drift, dwell reliability, and a plain-language verdict.
-- Gaze-compatible input: pointer position is sampled during a final 700ms settle window, so a compatible eye tracker that controls the system pointer works without camera access. Keyboard users focus each target and press Space/Enter. Pointer/click users activate it directly.
+- Gaze-compatible input: pointer position is sampled during the final 1.2-second settle window, so a compatible eye tracker that controls the system pointer works without camera access. Keyboard users focus each target and press Space/Enter. Pointer/click users activate it directly.
 - Active targets use a pollen center and two rings. Completion leaves a small ink “pressing” in the target’s former position.
 - Feedback is immediate and written in a polite field-note voice.
 
 ## Motion policy
 
 - 180–260ms opacity/transform transitions connect stages; the target arrives from the next survey coordinate rather than floating decoratively.
-- The target’s settle ring contracts once over 700ms to communicate dwell timing. Nothing loops.
+- The target’s settle ring contracts once over the 2.8-second observation period to communicate dwell timing. Nothing loops.
 - With `prefers-reduced-motion`, movement and contraction are removed; state changes use immediate opacity and clear text.
 
 ## Original asset plan and provenance

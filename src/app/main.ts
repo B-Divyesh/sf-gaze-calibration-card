@@ -33,6 +33,7 @@ let targetIndex = 0;
 let sampleTimer = 0;
 let advanceTimer = 0;
 let targetStarted = 0;
+let targetCompleted = false;
 let lastResult: SavedCheck | null = null;
 
 document.addEventListener("pointermove", (event) => {
@@ -160,6 +161,7 @@ function startCheck() {
 
 function renderCheck() {
   clearTimers();
+  targetCompleted = false;
   const [left, top] = targetPositions[targetIndex];
   shell(`
     <section class="check-shell" aria-labelledby="page-title">
@@ -196,12 +198,15 @@ function beginSampling(target: HTMLButtonElement) {
   readings.push({ targetX: rect.left + rect.width / 2, targetY: rect.top + rect.height / 2, samples });
   if (setup.mode === "keyboard") return;
   sampleTimer = window.setInterval(() => {
-    if (pointer && performance.now() - pointer.time < 600) samples.push({ ...pointer, time: performance.now() - targetStarted });
+    const elapsed = performance.now() - targetStarted;
+    if (elapsed >= 1600 && pointer && performance.now() - pointer.time < 600) samples.push({ ...pointer, time: elapsed });
   }, 50);
   advanceTimer = window.setTimeout(() => completeCurrentTarget(target), 2800);
 }
 
 function completeKeyboardTarget(target: HTMLButtonElement) {
+  if (targetCompleted) return;
+  targetCompleted = true;
   const rect = target.getBoundingClientRect();
   const reading = readings[readings.length - 1];
   reading.keyboard = true;
@@ -210,6 +215,8 @@ function completeKeyboardTarget(target: HTMLButtonElement) {
 }
 
 function completeCurrentTarget(target: HTMLButtonElement, clickX?: number, clickY?: number) {
+  if (targetCompleted) return;
+  targetCompleted = true;
   const reading = readings[readings.length - 1];
   if (clickX !== undefined && clickY !== undefined) reading.samples.push({ x: clickX, y: clickY, time: performance.now() - targetStarted });
   if (!reading.samples.length && pointer) reading.samples.push({ ...pointer, time: performance.now() - targetStarted });
