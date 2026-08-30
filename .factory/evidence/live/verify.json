@@ -1,0 +1,14 @@
+{
+  "url": "https://gaze-calibration-card.sociobot.in",
+  "loadMs": 932,
+  "errors": [],
+  "a11y": {
+    "title": "Gaze Calibration Card — compare gaze-pointer patterns",
+    "lang": "en",
+    "h1": 1,
+    "main": true,
+    "imgsMissingAlt": 0,
+    "buttonsUnlabeled": 0,
+    "textLength": 2518
+  }
+}

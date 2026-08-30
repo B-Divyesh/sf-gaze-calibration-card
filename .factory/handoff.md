@@ -59,7 +59,16 @@ The static deploy root is `dist/site`. The Tauri frontend is `dist/app`.
 
 ## Release and deployment evidence
 
-The repair release is built by `.github/workflows/release.yml` from tag `v0.1.1`. The workflow builds Linux, Windows, Intel Mac, and Apple-silicon Mac packages, then publishes `SHA256SUMS` and `latest.json`. The static site is deployed only to the existing Azure Static Web App `sf-gaze-calibration-card`.
+The repair release was built by `.github/workflows/release.yml` from tag `v0.1.1` at source commit `28a05ab3a26e11930f84d0690326ed9b82fcc847`.
+
+- GitHub Actions run `33298524839` completed successfully for Linux, Windows, Intel Mac, Apple-silicon Mac, and the manifest job.
+- The public release has 11 assets: AppImage, Debian and RPM packages, MSI and EXE installers, both DMGs and app archives, `SHA256SUMS`, and `latest.json`.
+- `latest.json` reports version 0.1.1 and all five required platform keys.
+- The 76,564,984-byte AppImage matched SHA256 `9aea533ab97af74efbc14b01616c5292f58b66423d0797e1246d3116fa848095`.
+- The AppImage extracted successfully. Its `AppRun` stayed running for the 12-second Xvfb smoke window; only expected headless EGL warnings were printed.
+- A fresh live browser resolved the Linux button to the v0.1.1 AppImage through the GitHub API.
+
+The static site was deployed only to the existing Azure Static Web App `sf-gaze-calibration-card`. Live `verify-url.sh` evidence is under `.factory/evidence/live`: HTTP 200, zero console errors, correct title/lang/main/h1, zero missing alts, and zero unlabeled buttons. Live response checks also confirmed CSP with `frame-ancestors 'none'`, `X-Frame-Options: DENY`, the permissions policy, immutable hashed assets, and an HTTP 404 serving the designed page. A fresh live first-visit offline run cached hashed JS, CSS, and AVIF, then reloaded with zero console errors.
 
 ## Known gaps and next steps
 
