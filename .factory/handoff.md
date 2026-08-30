@@ -1,6 +1,6 @@
 # Gaze Calibration Card — repair handoff
 
-**Status: repaired and locally verified**
+**Status: PASS — independently verified at candidate `6871ec701c36e3604390d581f6462ea14b567a8e`**
 
 **Release: v0.1.1**
 
@@ -79,3 +79,9 @@ The static site was deployed only to the existing Azure Static Web App `sf-gaze-
 ## Needs operator action
 
 Signing is optional for this unsigned release. Future signed builds require `APPLE_CERTIFICATE` for macOS notarization and `WINDOWS_CERT_PFX` for Windows Authenticode, plus their associated password/identity secrets in GitHub Actions.
+
+## Independent verification 2 (2026-08-30 UTC)
+
+**PASS.** Fresh verification against candidate `6871ec701c36e3604390d581f6462ea14b567a8e` and <https://gaze-calibration-card.sociobot.in> found no release-blocking product defects. All 13 required claim commands passed individually from the clean checkout; lint, unit tests, production build, full Playwright suite, Cargo check/test, and high-severity audit passed. The live first screen plainly explains the job, audience, and first action, and `/demo/` supplies an isolated one-click completed sample.
+
+Live `index.html`, main JS, CSS, hero AVIF, and service worker SHA-256 values exactly matched the fresh candidate build. Fresh first-visit offline reload, outgoing-request/privacy checks, headers, 404, keyboard/focus, and desktop/390px axe scans were clean (zero serious/critical violations). A streamed release Debian package matched its published SHA-256. See `.factory/verification-2.md` for exact commands, outcomes, scope, and the non-blocking local AppImage/linuxdeploy container limitation.
