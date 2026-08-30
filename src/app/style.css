@@ -30,6 +30,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .skip-link { position: fixed; z-index: 100; top: 8px; left: 8px; padding: 12px 16px; color: #fff; background: #17251e; transform: translateY(-140%); }
 .skip-link:focus { transform: translateY(0); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.demo-banner { display: flex; min-height: 48px; align-items: center; justify-content: center; gap: 16px; padding: 6px 24px; color: #17251e; background: #e8b963; font-size: 14px; }
+.demo-banner span { color: #48340f; }
+.demo-banner button { min-height: 36px; padding: 4px 10px; border: 1px solid #17251e; border-radius: 3px; color: #17251e; background: transparent; font-weight: 700; cursor: pointer; }
+.demo-banner button:last-child { color: #fff; background: #17251e; }
 
 .app-header, .app-footer { display: flex; align-items: center; justify-content: space-between; width: min(1180px, calc(100% - 48px)); margin: auto; }
 .app-header { min-height: 88px; border-bottom: 1px solid var(--rule); }
@@ -49,6 +53,7 @@ main { width: min(1180px, calc(100% - 48px)); min-height: calc(100vh - 150px); m
 h1, h2, h3, p { margin-top: 0; }
 h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; line-height: 1.08; letter-spacing: -.025em; }
 h1 { max-width: 790px; margin-bottom: 20px; font-size: clamp(2.5rem, 5.5vw, 4.8rem); font-weight: 500; }
+h1[tabindex="-1"]:focus { outline: none; }
 h2 { margin-bottom: 8px; font-size: clamp(1.65rem, 3vw, 2.3rem); font-weight: 500; }
 .lead { max-width: 62ch; color: var(--muted); font-size: clamp(1.08rem, 1.6vw, 1.24rem); line-height: 1.6; }
 .eyebrow { margin-bottom: 16px; color: var(--fern); font-size: 13px; font-weight: 750; letter-spacing: .15em; text-transform: uppercase; }
@@ -146,6 +151,8 @@ kbd { padding: 2px 6px; border: 1px solid var(--rule); border-radius: 3px; color
 .next-note p, .next-note li { color: var(--muted); }
 .next-note li { margin-bottom: 10px; }
 .threshold-note, .practice-note { margin-top: 24px; padding: 16px; border-left: 3px solid var(--pollen); background: color-mix(in srgb, var(--surface) 70%, transparent); font-size: 14px; }
+.validation-note { margin: -28px 0 40px; padding: 16px 20px; border: 1px solid var(--pollen); color: var(--muted); background: var(--surface); }
+.validation-note b { color: var(--ink); }
 .export-status { min-height: 26px; margin-top: 14px; color: var(--good); }
 
 .history-heading { margin-bottom: 40px; }
@@ -167,6 +174,8 @@ dialog form > div { display: flex; gap: 12px; margin-top: 24px; }
 @keyframes settle { from { inset: -10px; opacity: .3; } to { inset: 8px; opacity: 1; } }
 
 @media (max-width: 760px) {
+  .demo-banner { align-items: stretch; gap: 6px; flex-direction: column; padding: 10px 16px; }
+  .demo-banner button { min-height: 44px; }
   .app-header, .app-footer, main { width: min(100% - 32px, 1180px); }
   .app-header { min-height: 76px; }
   .brand small, .network-note { display: none; }

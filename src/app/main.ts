@@ -1,6 +1,8 @@
 import "./style.css";
 import { calculateMetrics, describeDrift, escapeHtml, formatDate, targetPositions, type InputMode, type Metrics, type PointSample, type TargetReading } from "./core";
 
+declare const __BUILD_ID__: string;
+
 interface Setup {
   mode: InputMode;
   posture: string;
@@ -20,6 +22,7 @@ interface SavedCheck {
 }
 
 const STORAGE_KEY = "gaze-calibration-card:checks:v1";
+const DEMO_STORAGE_KEY = "demo:gaze-calibration-card:checks:v1";
 const mount = document.querySelector<HTMLDivElement>("#app");
 if (!mount) throw new Error("App mount not found");
 const app: HTMLDivElement = mount;
@@ -35,6 +38,34 @@ let advanceTimer = 0;
 let targetStarted = 0;
 let targetCompleted = false;
 let lastResult: SavedCheck | null = null;
+let isDemo = location.pathname.startsWith("/demo") || new URLSearchParams(location.search).get("demo") === "1";
+
+const sampleResult: SavedCheck = {
+  id: "sample-steady-morning",
+  date: "2026-08-30T09:15:00.000Z",
+  setup: {
+    mode: "gaze-pointer",
+    posture: "Wheelchair upright; headrest raised",
+    glasses: "Distance glasses",
+    lighting: "Even indoor light",
+    notes: "Monitor centered after breakfast",
+    saveNotes: true,
+    keepHistory: true
+  },
+  metrics: {
+    meanError: 42,
+    horizontalDrift: 7,
+    verticalDrift: -4,
+    dwellReliability: 91,
+    sampleCount: 108,
+    verdict: "reliable"
+  },
+  readings: targetPositions.map(([x, y], index) => ({
+    targetX: x,
+    targetY: y,
+    samples: [{ x: x + 28 + (index % 3) * 4, y: y + 20, time: 2100 }]
+  }))
+};
 
 document.addEventListener("pointermove", (event) => {
   pointer = { x: event.clientX, y: event.clientY, time: performance.now() };
@@ -45,6 +76,7 @@ window.addEventListener("offline", updateNetworkStatus);
 
 function shell(content: string, step = "setup") {
   app.innerHTML = `
+    ${isDemo ? `<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved</strong><span>Explore a completed check without changing your history.</span><button id="reset-demo" type="button">Reset demo</button><button id="leave-demo" type="button">Start for real</button></aside>` : ""}
     <header class="app-header">
       <a class="brand" href="#setup" aria-label="Gaze Calibration Card home">
         <svg aria-hidden="true" viewBox="0 0 40 40"><path d="M20 34C19 21 25 12 34 6M19 26c-6 0-10-4-11-9 6-1 11 2 12 7M23 19c0-6 4-10 9-11 1 6-2 11-8 12"/></svg>
@@ -55,10 +87,39 @@ function shell(content: string, step = "setup") {
         <button class="text-button" id="history-button" type="button">Past checks</button>
       </div>
     </header>
+    <p id="view-announcement" class="sr-only" role="status" aria-live="polite"></p>
     <main id="main" data-step="${step}">${content}</main>
-    <footer class="app-footer"><span>Measurements stay on this device.</span><span>Not a medical or hardware diagnostic.</span></footer>`;
+    <footer class="app-footer"><span>Measurements stay on this device.</span><span>Not a medical or hardware diagnostic.</span><span>Build ${__BUILD_ID__}</span></footer>`;
   document.querySelector("#history-button")?.addEventListener("click", renderHistory);
+  document.querySelector("#reset-demo")?.addEventListener("click", resetDemo);
+  document.querySelector("#leave-demo")?.addEventListener("click", leaveDemo);
   updateNetworkStatus();
+}
+
+function announceAndFocus(message: string) {
+  requestAnimationFrame(() => {
+    const heading = document.querySelector<HTMLElement>("#page-title");
+    const announcement = document.querySelector<HTMLElement>("#view-announcement");
+    if (announcement) announcement.textContent = message;
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    }
+  });
+}
+
+function resetDemo() {
+  localStorage.removeItem(DEMO_STORAGE_KEY);
+  readings = sampleResult.readings;
+  lastResult = sampleResult;
+  renderResult(sampleResult);
+}
+
+function leaveDemo() {
+  localStorage.removeItem(DEMO_STORAGE_KEY);
+  isDemo = false;
+  history.replaceState({}, "", location.pathname.startsWith("/demo") ? "/" : location.pathname);
+  renderSetup(true);
 }
 
 function updateNetworkStatus() {
@@ -68,7 +129,7 @@ function updateNetworkStatus() {
   status.classList.toggle("is-offline", !navigator.onLine);
 }
 
-function renderSetup() {
+function renderSetup(shouldFocus = false) {
   clearTimers();
   shell(`
     <section class="intro-grid" aria-labelledby="page-title">
@@ -112,6 +173,7 @@ function renderSetup() {
           </div>
           <div class="form-actions">
             <button class="primary-button" type="submit">Prepare the check <span aria-hidden="true">→</span></button>
+            <button class="secondary-button" id="load-sample" type="button">Load sample project</button>
             <span class="action-note">You can stop at any time with Escape.</span>
           </div>
         </form>
@@ -131,6 +193,11 @@ function renderSetup() {
     };
     renderReady();
   });
+  document.querySelector("#load-sample")?.addEventListener("click", () => {
+    isDemo = true;
+    resetDemo();
+  });
+  if (shouldFocus) announceAndFocus("Setup ready");
 }
 
 function renderReady() {
@@ -150,7 +217,8 @@ function renderReady() {
       <p class="device-note">Results depend on your screen, pointer settings, and eye-tracker driver. This companion does not replace the maker’s calibration.</p>
     </section>`, "ready");
   document.querySelector("#start-check")?.addEventListener("click", startCheck);
-  document.querySelector("#back-setup")?.addEventListener("click", renderSetup);
+  document.querySelector("#back-setup")?.addEventListener("click", () => renderSetup(true));
+  announceAndFocus("Check instructions ready");
 }
 
 function startCheck() {
@@ -179,6 +247,7 @@ function renderCheck() {
   const target = document.querySelector<HTMLButtonElement>("#gaze-target");
   if (!target) return;
   if (setup.mode === "keyboard") target.focus();
+  else announceAndFocus(`Target ${targetIndex + 1} of 9 ready`);
   target.addEventListener("keydown", (event) => {
     if (event.key === " " || event.key === "Enter") {
       event.preventDefault();
@@ -246,7 +315,8 @@ function renderStopped() {
   clearTimers();
   shell(`<section class="message-sheet" aria-labelledby="page-title"><p class="eyebrow">Check paused</p><h1 id="page-title">No result was saved</h1><p>You stopped after ${Math.min(readings.length, 9)} of 9 marks. Your setup notes remain only in this open session.</p><div class="ready-actions"><button class="primary-button" id="restart" type="button">Start again</button><button class="secondary-button" id="edit-setup" type="button">Edit setup</button></div></section>`, "stopped");
   document.querySelector("#restart")?.addEventListener("click", startCheck);
-  document.querySelector("#edit-setup")?.addEventListener("click", renderSetup);
+  document.querySelector("#edit-setup")?.addEventListener("click", () => renderSetup(true));
+  announceAndFocus("Check stopped. No result was saved");
 }
 
 function finishCheck() {
@@ -261,9 +331,9 @@ function finishCheck() {
 function renderResult(result: SavedCheck) {
   const { metrics } = result;
   const verdictCopy = {
-    reliable: ["Reliable for use", "The pointer stayed close and steady across this field."],
-    borderline: ["Use with care", "The setup is usable, but drift or dwell was inconsistent."],
-    unreliable: ["Recalibrate first", metrics.sampleCount ? "The pointer missed or wandered around several marks." : "No recent pointer movement was detected. Make sure your gaze device moves the system pointer."],
+    reliable: ["Pattern within comparison guide", "The pointer stayed inside this app’s comparison bands."],
+    borderline: ["Mixed comparison pattern", "Drift or dwell crossed one of this app’s comparison bands."],
+    unreliable: ["Pattern outside comparison guide", metrics.sampleCount ? "The pointer crossed this app’s error or dwell bands." : "No recent pointer movement was detected. Make sure your gaze device moves the system pointer."],
     practice: ["Keyboard path complete", "Keyboard access works. No gaze reliability score was calculated."]
   }[metrics.verdict];
   shell(`
@@ -274,10 +344,11 @@ function renderResult(result: SavedCheck) {
       </div>
       ${metrics.verdict === "practice" ? `<div class="practice-note"><b>Practice only:</b> Repeat with “Eye-controlled pointer” to measure accuracy and dwell.</div>` : `
       <div class="metrics-grid" aria-label="Measurement summary">
-        <div><span>Average target error</span><strong>${Math.round(metrics.meanError)}<small> px</small></strong><p>${metrics.meanError <= 80 ? "Within the reliable band" : "Above the 80 px reliable band"}</p></div>
+        <div><span>Average target error</span><strong>${Math.round(metrics.meanError)}<small> px</small></strong><p>${metrics.meanError <= 80 ? "Inside the ≤80 px comparison band" : "Outside the ≤80 px comparison band"}</p></div>
         <div><span>Dwell reliability</span><strong>${Math.round(metrics.dwellReliability)}<small>%</small></strong><p>${metrics.dwellReliability >= 75 ? "Steady on most samples" : "Pointer wandered or went quiet"}</p></div>
         <div><span>Directional pattern</span><strong class="drift-value">${escapeHtml(describeDrift(metrics.horizontalDrift, metrics.verticalDrift))}</strong><p>${metrics.sampleCount} local pointer samples</p></div>
       </div>`}
+      <p class="validation-note"><b>Use this as a comparison, not a pass or fail.</b> These pixel bands have not been validated across eye trackers or screen sizes.</p>
       <div class="result-detail">
         <div class="result-map" role="img" aria-label="Nine-point map. ${Math.round(metrics.meanError)} pixel average error and ${Math.round(metrics.dwellReliability)} percent dwell reliability.">
           ${readings.map((reading, index) => {
@@ -287,7 +358,7 @@ function renderResult(result: SavedCheck) {
           }).join("")}
           <span class="map-caption">Screen field · per-mark mean error</span>
         </div>
-        <div class="next-note"><h2>What to do next</h2>${nextSteps(metrics)}<p class="threshold-note">Reliable: ≤80 px error and ≥75% dwell. Borderline: ≤125 px and ≥55%. Device-dependent, not diagnostic.</p></div>
+        <div class="next-note"><h2>What to do next</h2>${nextSteps(metrics)}<p class="threshold-note">Comparison bands: ≤80 px and ≥75% dwell; mixed: ≤125 px and ≥55%. Unvalidated, device-dependent, and not diagnostic.</p></div>
       </div>
       <div class="result-actions">
         <button class="primary-button" id="run-again" type="button">Check again</button>
@@ -297,12 +368,13 @@ function renderResult(result: SavedCheck) {
       <p id="export-status" class="export-status" role="status" aria-live="polite"></p>
     </section>`, "result");
   document.querySelector("#run-again")?.addEventListener("click", startCheck);
-  document.querySelector("#new-setup")?.addEventListener("click", renderSetup);
+  document.querySelector("#new-setup")?.addEventListener("click", () => renderSetup(true));
   document.querySelector("#export-report")?.addEventListener("click", () => exportReport(result));
+  announceAndFocus(`Check result: ${verdictCopy[0]}`);
 }
 
 function nextSteps(metrics: Metrics): string {
-  if (metrics.verdict === "reliable") return "<p>Your setup looks ready. Begin the task while your posture and lighting are unchanged.</p>";
+  if (metrics.verdict === "reliable") return "<p>Compare this result with your own comfortable sessions before starting a demanding task.</p>";
   if (metrics.verdict === "practice") return "<p>Choose the eye-controlled pointer mode when your gaze device is ready.</p>";
   if (!metrics.sampleCount) return "<p>Confirm that the tracker is on and controlling the pointer, then repeat the check.</p>";
   const steps = ["Run your device maker’s calibration", "Return to the posture recorded for a good check"];
@@ -311,13 +383,13 @@ function nextSteps(metrics: Metrics): string {
 }
 
 function getChecks(): SavedCheck[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as SavedCheck[]; }
+  try { return JSON.parse(localStorage.getItem(isDemo ? DEMO_STORAGE_KEY : STORAGE_KEY) ?? "[]") as SavedCheck[]; }
   catch { return []; }
 }
 
 function saveCheck(check: SavedCheck) {
   const checks = [check, ...getChecks()].slice(0, 50);
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(checks)); }
+  try { localStorage.setItem(isDemo ? DEMO_STORAGE_KEY : STORAGE_KEY, JSON.stringify(checks)); }
   catch { /* A result remains exportable even if storage is unavailable. */ }
 }
 
@@ -329,12 +401,13 @@ function renderHistory() {
     ${checks.length ? `<ol class="history-list">${checks.map((check) => `<li><button type="button" data-id="${check.id}"><span class="history-verdict ${check.metrics.verdict}">${check.metrics.verdict}</span><b>${escapeHtml(formatDate(check.date))}</b><span>${check.metrics.verdict === "practice" ? "Keyboard practice" : `${Math.round(check.metrics.meanError)} px · ${Math.round(check.metrics.dwellReliability)}% dwell`}</span><small>${escapeHtml([check.setup.posture, check.setup.glasses, check.setup.lighting].filter(Boolean).join(" · ") || "No setup notes saved")}</small></button></li>`).join("")}</ol>` : `<div class="empty-state"><span aria-hidden="true">⌁</span><h2>No saved checks yet</h2><p>Complete a field check and leave “Keep this check” selected.</p></div>`}
     <button class="primary-button" id="history-home" type="button">Start a new check</button>
   </section>`, "history");
-  document.querySelector("#history-home")?.addEventListener("click", renderSetup);
+  document.querySelector("#history-home")?.addEventListener("click", () => renderSetup(true));
   document.querySelectorAll<HTMLButtonElement>("[data-id]").forEach((button) => button.addEventListener("click", () => {
     const check = checks.find((item) => item.id === button.dataset.id);
     if (check) { lastResult = check; readings = check.readings; renderResult(check); }
   }));
   document.querySelector("#clear-history")?.addEventListener("click", confirmClearHistory);
+  announceAndFocus("Past checks");
 }
 
 function confirmClearHistory() {
@@ -342,7 +415,7 @@ function confirmClearHistory() {
   dialog.innerHTML = `<form method="dialog"><h2>Clear all saved checks?</h2><p>This removes ${getChecks().length} local ${getChecks().length === 1 ? "check" : "checks"}. Export anything you need first.</p><div><button class="danger-button" value="confirm">Clear checks</button><button class="secondary-button" value="cancel" autofocus>Keep checks</button></div></form>`;
   document.body.append(dialog);
   dialog.addEventListener("close", () => {
-    if (dialog.returnValue === "confirm") localStorage.removeItem(STORAGE_KEY);
+    if (dialog.returnValue === "confirm") localStorage.removeItem(isDemo ? DEMO_STORAGE_KEY : STORAGE_KEY);
     dialog.remove();
     renderHistory();
   });
@@ -351,7 +424,7 @@ function confirmClearHistory() {
 
 function exportReport(result: SavedCheck) {
   const notes = result.setup.saveNotes ? [result.setup.posture, result.setup.glasses, result.setup.lighting, result.setup.notes].filter(Boolean).map(escapeHtml).join(" · ") : "Not saved by user";
-  const report = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Gaze check report ${escapeHtml(result.date)}</title><style>body{font:17px/1.55 system-ui;color:#17251e;max-width:760px;margin:48px auto;padding:0 24px}h1{font:700 38px Georgia,serif}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:12px;border-bottom:1px solid #aaa}.note{background:#f3f0e5;padding:16px}small{color:#59685f}</style><main><p>Gaze Calibration Card · support report</p><h1>${result.metrics.verdict}</h1><p>${escapeHtml(formatDate(result.date))}</p><table><tr><th>Input</th><td>${escapeHtml(result.setup.mode)}</td></tr><tr><th>Average target error</th><td>${Math.round(result.metrics.meanError)} px</td></tr><tr><th>Dwell reliability</th><td>${Math.round(result.metrics.dwellReliability)}%</td></tr><tr><th>Directional pattern</th><td>${escapeHtml(describeDrift(result.metrics.horizontalDrift, result.metrics.verticalDrift))}</td></tr><tr><th>Pointer samples</th><td>${result.metrics.sampleCount}</td></tr><tr><th>Setup notes</th><td>${notes}</td></tr></table><p class="note"><b>Interpretation:</b> Reliable means ≤80 px mean error and ≥75% dwell samples within 88 px. Borderline means ≤125 px and ≥55%. Results are device- and display-dependent. This is not a medical diagnostic and does not replace the device maker’s calibration.</p><small>Generated locally by Gaze Calibration Card. No camera frames or data were uploaded.</small></main></html>`;
+  const report = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Gaze check report ${escapeHtml(result.date)}</title><style>body{font:17px/1.55 system-ui;color:#17251e;max-width:760px;margin:48px auto;padding:0 24px}h1{font:700 38px Georgia,serif}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:12px;border-bottom:1px solid #aaa}.note{background:#f3f0e5;padding:16px}small{color:#59685f}</style><main><p>Gaze Calibration Card · support report</p><h1>Pointer comparison</h1><p>${escapeHtml(formatDate(result.date))}</p><table><tr><th>Input</th><td>${escapeHtml(result.setup.mode)}</td></tr><tr><th>Average target error</th><td>${Math.round(result.metrics.meanError)} px</td></tr><tr><th>Dwell reliability</th><td>${Math.round(result.metrics.dwellReliability)}%</td></tr><tr><th>Directional pattern</th><td>${escapeHtml(describeDrift(result.metrics.horizontalDrift, result.metrics.verticalDrift))}</td></tr><tr><th>Pointer samples</th><td>${result.metrics.sampleCount}</td></tr><tr><th>Setup notes</th><td>${notes}</td></tr></table><p class="note"><b>Interpretation:</b> The app compares results with unvalidated pixel bands: ≤80 px mean error and ≥75% dwell, or a mixed band of ≤125 px and ≥55%. Results are device- and display-dependent. This is not a pass, medical diagnostic, or replacement for the device maker’s calibration.</p><small>Generated locally by Gaze Calibration Card. No camera frames or data were uploaded.</small></main></html>`;
   const url = URL.createObjectURL(new Blob([report], { type: "text/html" }));
   const link = document.createElement("a");
   link.href = url;
@@ -364,7 +437,8 @@ function exportReport(result: SavedCheck) {
 
 window.addEventListener("hashchange", () => {
   if (location.hash === "#history") renderHistory();
-  else if (location.hash === "#setup") renderSetup();
+  else if (location.hash === "#setup") renderSetup(true);
 });
 
-renderSetup();
+if (isDemo) resetDemo();
+else renderSetup();

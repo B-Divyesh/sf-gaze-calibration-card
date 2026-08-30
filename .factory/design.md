@@ -67,6 +67,12 @@ Final generation prompt: “Top-down archival botanical field-guide plate on war
 
 Generated with the Factory Azure image deployment (`factory-image`), 2026-08-28. The first candidate was rejected because it contained only eight specimens; the accepted candidate was visually reviewed for count, text artifacts, brands, seams, and palette. Original asset for this project; prompt and generation metadata live beside the source in `assets/src/hero-field-guide.json`. Production exports are AVIF/WebP and are disclosed in the footer.
 
+The 1200×630 social card is a center crop of that accepted original, exported locally on 2026-08-30. The three walkthrough images are direct Playwright captures of this app’s setup, target, and sample-result screens, exported to WebP on 2026-08-30. They contain no stock or third-party material.
+
+## Interpretation policy
+
+The fixed pixel bands remain visible so repeated checks can be compared, but no label calls a setup reliable or ready. Result language says “within,” “mixed,” or “outside” the comparison guide. Every result and export states that the bands are unvalidated, device-dependent, and not a pass or diagnosis. This preserves the useful measurements without claiming the brief’s unproven 90% agreement outcome.
+
 ## Responsive intent
 
 - Desktop: instructions and live survey area share the sheet; results pair verdict with the nine-cell map.

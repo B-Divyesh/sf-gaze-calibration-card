@@ -54,7 +54,7 @@ jobs:
           tagName: v__VERSION__
           releaseName: Gaze Calibration Card v__VERSION__
           releaseBody: |
-            A private nine-point reliability check for gaze-controlled pointers.
+            A private nine-point comparison for gaze-controlled pointers.
 
             These builds are unsigned. On macOS, right-click the app and choose Open. On Windows, confirm the publisher warning.
           releaseDraft: false

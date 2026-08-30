@@ -6,7 +6,7 @@ export default defineConfig({
   use: { baseURL: "http://127.0.0.1:1420", trace: "retain-on-failure" },
   webServer: [
     { command: "npm run dev -- --host 127.0.0.1", url: "http://127.0.0.1:1420", reuseExistingServer: true },
-    { command: "npm run dev:site -- --host 127.0.0.1", url: "http://127.0.0.1:4173", reuseExistingServer: true }
+    { command: "npm run build:site && npm run preview:site", url: "http://127.0.0.1:4173", reuseExistingServer: true }
   ],
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
