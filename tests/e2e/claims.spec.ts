@@ -9,6 +9,7 @@ import { join } from "node:path";
 const execFileAsync = promisify(execFile);
 
 const siteUrl = "http://127.0.0.1:4173";
+const siteCache = "gaze-card-site-v2";
 const releaseFixture = {
   tag_name: "v0.1.1",
   assets: [
@@ -26,6 +27,23 @@ async function completeKeyboardCheck(page: import("@playwright/test").Page) {
   for (let index = 1; index <= 9; index += 1) await page.getByRole("button", { name: `Target ${index} of 9` }).press("Space");
 }
 
+async function waitForOfflineShell(page: import("@playwright/test").Page) {
+  await page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.ready;
+    if (!registration.active) throw new Error("Service worker did not activate");
+    if (!navigator.serviceWorker.controller) {
+      await new Promise<void>((resolve) => navigator.serviceWorker.addEventListener("controllerchange", () => resolve(), { once: true }));
+    }
+  });
+  await expect.poll(async () => page.evaluate(async (cacheName) => {
+    const assetPaths = [...document.querySelectorAll<HTMLScriptElement | HTMLLinkElement>("script[src], link[rel='modulepreload'][href], link[rel='stylesheet'][href]")]
+      .map((element) => new URL(element.getAttribute("src") ?? element.getAttribute("href") ?? "", location.href).pathname);
+    const cache = await caches.open(cacheName);
+    const cached = await Promise.all(assetPaths.map((path) => cache.match(path, { ignoreVary: true })));
+    return cached.every(Boolean);
+  }, siteCache)).toBe(true);
+}
+
 test("@claim:sample-demo opens realistic data in isolated storage", async ({ page }) => {
   await page.goto(`${siteUrl}/`);
   await page.evaluate(() => localStorage.setItem("gaze-calibration-card:checks:v1", "real-history-marker"));
@@ -40,34 +58,40 @@ test("@claim:sample-demo opens realistic data in isolated storage", async ({ pag
 });
 
 test("@claim:offline-reload reloads the complete site after one visit", async ({ browser }) => {
+  // This claim deliberately owns its context: offline state and service-worker
+  // storage must not leak into the normal desktop/mobile browser fixtures.
   const context = await browser.newContext();
-  await context.route("https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest", (route) => route.fulfill({ json: releaseFixture }));
-  const page = await context.newPage();
-  await page.goto(`${siteUrl}/`);
-  await expect(page.locator("#download-status")).toContainText("Version 0.1.1");
-  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
-  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
-  const cached = await page.evaluate(async () => (await (await caches.open("gaze-card-site-v2")).keys()).map((request) => request.url));
-  expect(cached.some((url) => /\/assets\/main-.*\.js$/.test(url))).toBe(true);
-  expect(cached.some((url) => /\/assets\/style-.*\.css$/.test(url))).toBe(true);
-  expect(cached.some((url) => url.endsWith("/assets/hero-field-guide.avif"))).toBe(true);
-  const errors: string[] = [];
-  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
-  await context.setOffline(true);
-  await page.reload();
-  await expect(page.getByRole("heading", { name: "Check your gaze pointer before a demanding task" })).toBeVisible();
-  await context.setOffline(false);
-  await page.goto(`${siteUrl}/demo/`);
-  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
-  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
-  await expect.poll(() => page.evaluate(async () => (await (await caches.open("gaze-card-site-v2")).keys()).some((request) => /\/assets\/demo-.*\.js$/.test(request.url)))).toBe(true);
-  await context.setOffline(true);
-  await page.reload();
-  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
-  await page.getByRole("button", { name: "Reset demo" }).click();
-  await expect(page.getByRole("heading", { name: "Pattern within comparison guide" })).toBeVisible();
-  expect(errors).toEqual([]);
-  await context.close();
+  try {
+    await context.route("https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest", (route) => route.fulfill({ json: releaseFixture }));
+    const page = await context.newPage();
+    const errors: string[] = [];
+    page.on("console", (message) => { if (message.type() === "error") errors.push(`${message.location().url}: ${message.text()}`); });
+
+    await page.goto(`${siteUrl}/`);
+    await expect(page.locator("#download-status")).toContainText("Version 0.1.1");
+    await waitForOfflineShell(page);
+    const cached = await page.evaluate(async (cacheName) => (await (await caches.open(cacheName)).keys()).map((request) => request.url), siteCache);
+    expect(cached.some((url) => /\/assets\/main-.*\.js$/.test(url))).toBe(true);
+    expect(cached.some((url) => /\/assets\/style-.*\.css$/.test(url))).toBe(true);
+    expect(cached.some((url) => url.endsWith("/assets/hero-field-guide.avif"))).toBe(true);
+
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Check your gaze pointer before a demanding task" })).toBeVisible();
+    await context.setOffline(false);
+
+    await page.goto(`${siteUrl}/demo/`);
+    await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
+    await waitForOfflineShell(page);
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
+    await page.getByRole("button", { name: "Reset demo" }).click();
+    await expect(page.getByRole("heading", { name: "Pattern within comparison guide" })).toBeVisible();
+    expect(errors).toEqual([]);
+  } finally {
+    await context.close();
+  }
 });
 
 test("@claim:local-private completes a demo flow without camera, telemetry, or cross-origin requests", async ({ page }) => {
@@ -168,23 +192,31 @@ test("@claim:history-limit keeps no more than 50 local checks", async ({ page })
   expect(await page.evaluate(() => localStorage.getItem("gaze-calibration-card:checks:v1"))).toBeNull();
 });
 
-test("@claim:release-download uses GitHub release metadata and caches it for one hour", async ({ page, browser }) => {
-  let apiCalls = 0;
-  await page.addInitScript(() => Object.defineProperty(navigator, "userAgentData", { configurable: true, value: { platform: "Windows", getHighEntropyValues: async () => ({ architecture: "x86" }) } }));
-  await page.route("https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest", (route) => { apiCalls += 1; return route.fulfill({ json: releaseFixture }); });
-  await page.goto(`${siteUrl}/`);
-  await expect(page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-x64\.exe$/);
-  await page.reload();
-  await expect(page.locator("#download-status")).toContainText("Version 0.1.1");
-  expect(apiCalls).toBe(1);
-  const mac = await browser.newContext();
-  await mac.addInitScript(() => Object.defineProperty(navigator, "userAgentData", { configurable: true, value: { platform: "macOS", getHighEntropyValues: async () => ({ architecture: "arm" }) } }));
-  await mac.route("https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest", (route) => route.fulfill({ json: releaseFixture }));
-  const macPage = await mac.newPage();
-  await macPage.goto(`${siteUrl}/`);
-  await expect(macPage.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-aarch64\.dmg$/);
-  await expect(macPage.locator("#platform-label")).toHaveText("Download for Mac (Apple silicon)");
-  await mac.close();
+test("@claim:release-download uses GitHub release metadata and caches it for one hour", async ({ browser }) => {
+  // This is a release-metadata unit of behavior, not a service-worker test.
+  // Blocking workers here keeps its temporary platform contexts independent of
+  // the offline-reload claim and avoids unrelated worker teardown activity.
+  const windows = await browser.newContext({ serviceWorkers: "block" });
+  const mac = await browser.newContext({ serviceWorkers: "block" });
+  try {
+    const page = await windows.newPage();
+    let apiCalls = 0;
+    await page.addInitScript(() => Object.defineProperty(navigator, "userAgentData", { configurable: true, value: { platform: "Windows", getHighEntropyValues: async () => ({ architecture: "x86" }) } }));
+    await page.route("https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest", (route) => { apiCalls += 1; return route.fulfill({ json: releaseFixture }); });
+    await page.goto(`${siteUrl}/`);
+    await expect(page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-x64\.exe$/);
+    await page.reload();
+    await expect(page.locator("#download-status")).toContainText("Version 0.1.1");
+    expect(apiCalls).toBe(1);
+    await mac.addInitScript(() => Object.defineProperty(navigator, "userAgentData", { configurable: true, value: { platform: "macOS", getHighEntropyValues: async () => ({ architecture: "arm" }) } }));
+    await mac.route("https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest", (route) => route.fulfill({ json: releaseFixture }));
+    const macPage = await mac.newPage();
+    await macPage.goto(`${siteUrl}/`);
+    await expect(macPage.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-aarch64\.dmg$/);
+    await expect(macPage.locator("#platform-label")).toHaveText("Download for Mac (Apple silicon)");
+  } finally {
+    await Promise.all([windows.close(), mac.close()]);
+  }
 });
 
 test("@claim:installer-checksum stops the shell installer before use on a checksum mismatch", async () => {

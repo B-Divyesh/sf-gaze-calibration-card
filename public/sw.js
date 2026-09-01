@@ -41,10 +41,14 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(fetch(event.request).then((response) => {
       if (response.ok) caches.open(CACHE).then((cache) => cache.put(event.request, response.clone()));
       return response;
-    }).catch(async () => (await caches.match(event.request)) || (await caches.match("/"))));
+    }).catch(async () => (await caches.match(event.request, { ignoreVary: true })) || (await caches.match("/", { ignoreVary: true }))));
     return;
   }
-  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
+  // Vite preview and Static Web Apps may send Vary: Origin. Assets are
+  // precached by the worker without that header, while module/style requests
+  // can include it. The URL still identifies the same same-origin immutable
+  // asset, so ignore Vary when serving this local-only cache.
+  event.respondWith(caches.match(event.request, { ignoreVary: true }).then((cached) => cached || fetch(event.request).then((response) => {
     if (response.ok) caches.open(CACHE).then((cache) => cache.put(event.request, response.clone()));
     return response;
   })));
