@@ -91,3 +91,12 @@ Deploy the rebuilt static artifact with:
 `/opt/fleet/lib/deploy-static.sh gaze-calibration-card dist/site`
 
 Then cold-open `/`, `/demo/`, `/privacy/`, `/terms/`, and a missing route. In a fresh browser context, load `/` and `/demo/` once, wait for the service worker, set the browser offline, reload both routes, and verify no console errors.
+
+## Deployment evidence
+
+- Repair code commit: `93872e048700dd8591b5de27d51f4943e3be5e49`.
+- Deployed `dist/site` with `/opt/fleet/lib/deploy-static.sh gaze-calibration-card dist/site`; Static Web Apps deployment `ecf5c15b-3f31-4851-84f5-199271123df0` succeeded and the product custom domain reported Ready.
+- Live route smoke check: `/`, `/demo/`, `/privacy/`, `/terms/`, and `/sw.js` returned 200; `/does-not-exist` returned the designed HTTP 404.
+- Live `/sw.js` SHA-256 matched the built artifact: `56d5b3224750167dcaa88b2a54490af8b83d703870c8f0cb9834830d813386c0`.
+- Live `/` returned the expected CSP (`frame-ancestors 'none'`), nosniff, strict referrer policy, frame denial, and camera/microphone/geolocation/payment/USB-denying permissions policy.
+- A fresh live Playwright context loaded landing and demo, waited for a controlling service worker, went offline, and reloaded both routes successfully with zero browser console errors.
