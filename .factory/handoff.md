@@ -1,5 +1,32 @@
 # Gaze Calibration Card — polish 1 handoff
 
+---
+
+# Adversarial review 2 handoff
+
+**Work order:** `gaze-calibration-card-review-2`
+**Candidate:** `990fbcffc213966b7901b5db0fa6506c4a2d5313`
+**Result:** **FAIL** — review artifacts only; no product code changed.
+
+## What was done
+
+- Reviewed the deployed landing cold at 390×844 and 1440×900, then exercised the live sample demo, reset, exit, request log, offline flow, routes, links, metadata, headers, and 404.
+- Read the brief, design, demo contract, claim manifest, every earlier review/polish/verification/handoff report, README, and relevant app/site/tests.
+- Ran `npm ci`, every one of the 14 exact claim commands, `npm test`, `npm run lint`, `npm run build`, `npm run test:e2e -- --reporter=line`, and `npm run test:lighthouse`.
+- Wrote the complete evidence and copy audit to `.factory/review-2.md`.
+
+## Verification summary
+
+The landing, first-read gate, realistic one-click demo, storage isolation, reset, offline reload, keyboard/accessibility coverage, production build, structure, links, visual identity, and all declared command exit codes passed. Playwright records the full e2e run as passed.
+
+## Blocking follow-up
+
+1. `F-1-4`: execute the PowerShell installer mismatch path and test the release-cache one-hour expiry/request allowance; current passing tests do not prove those written claims.
+2. `F-1-5`: register and observe-test the remaining limitation and signing statements, or rewrite them as observable, qualified UI facts.
+3. `F-1-8`: use the documented terms `pointer`, `target`, `check`, and `dwell` consistently, and split the overlong README AppImage release sentence.
+
+No deployment or product mutation was performed by this review.
+
 **Work order:** `gaze-calibration-card-polish-1`
 **Base:** `c780b097d535be561ec4bba82aa339c8d14a5788`
 **Repair commit:** `45c574b242433aa0f6a7bb6bc433858f876fec86`
