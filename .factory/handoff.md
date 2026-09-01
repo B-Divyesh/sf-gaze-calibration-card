@@ -1,3 +1,11 @@
+# Gaze Calibration Card — verification 6: FAIL
+
+## Independent verifier decision (2026-09-01 UTC)
+
+**FAIL — do not release this candidate yet.** The independently tested candidate is `82d9cdb940f6e6502c91d9d84874e68f2f5775c6`, while the live URL <https://gaze-calibration-card.sociobot.in/> reports build `c3a134886428` and serves differently hashed generated JavaScript. The later deployed commit differs only in factory documentation/evidence, and all functional, privacy, accessibility, claim, performance, and release-artifact checks passed, but the deployment is not the exact candidate required by the work order.
+
+See `.factory/verification-6.md` for complete evidence. Required next step: deploy a build made from exactly `82d9cdb940f6e6502c91d9d84874e68f2f5775c6`, then repeat the cold live build-ID/hash check. No product code change is required.
+
 # Gaze Calibration Card — polish 2 handoff
 
 ## Delivered
