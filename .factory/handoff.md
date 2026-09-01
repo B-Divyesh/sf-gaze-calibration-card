@@ -36,7 +36,16 @@ Results:
 
 ## Deploy and release evidence
 
-Pending the final push, `v0.1.3` release workflow, static deployment, and cold live recheck. This section is updated with the exact commit, CI run, release assets, deployment ID, and live route checks after those actions complete.
+- Repair commit: `af68307d7e8591c80b0bd203ff5d24ac53d84edd`. A one-line static accessibility follow-up is `82d9cdb940f6e6502c91d9d84874e68f2f5775c6`; it adds an explicit name to the install-copy control and contains no desktop-app change.
+- GitHub **Quality gates** passed for both commits: runs [`33570320624`](https://github.com/B-Divyesh/sf-gaze-calibration-card/actions/runs/33570320624) and [`33570547852`](https://github.com/B-Divyesh/sf-gaze-calibration-card/actions/runs/33570547852). The latter includes the new `windows-installer` job, which passed the actual PowerShell corrupt-download test.
+- GitHub **Release desktop apps** run [`33570321910`](https://github.com/B-Divyesh/sf-gaze-calibration-card/actions/runs/33570321910) passed on Ubuntu, Windows, Apple silicon macOS, and Intel macOS. It ran the new Windows Authenticode and macOS signing-state checks.
+- Release [`v0.1.3`](https://github.com/B-Divyesh/sf-gaze-calibration-card/releases/tag/v0.1.3) targets the repair commit and contains RPM, DEB, AppImage, MSI, EXE, both DMGs/app archives, `SHA256SUMS`, and `latest.json`.
+- Downloaded AppImage checksum: `fef6ad16ab27a13ed013f74c1de4829632b4cc207d8f916eede2a964e0659c79`; it matched both `SHA256SUMS` and `latest.json`.
+- Deployed `dist/site` with `/opt/fleet/lib/deploy-static.sh gaze-calibration-card dist/site`. Final Static Web Apps deployment: `654cd6d4-e467-4fe7-bd26-4221801036ae`.
+- Cold live verification passed at `https://gaze-calibration-card.sociobot.in/`: 877ms observed load; title, `lang=en`, one h1, main landmark, image alt text, and zero console errors. Screenshot/JSON: `.factory/evidence/polish-2/live/`.
+- Live 390px Axe scan reported zero violations (including zero serious/critical). `npx @axe-core/cli` could not locate a system Chrome binary in this worker; the equivalent Playwright Axe scan used the installed Chromium.
+- Cold `?demo=1` redirected to `/demo/#result`, showed the persistent demo banner and completed-sample h1, and logged zero console errors. Screenshot: `.factory/evidence/polish-2/live/demo-390.png`.
+- Live release discovery now reports `Version 0.1.3 · a matching download is ready.` and its Linux button points to the published v0.1.3 AppImage.
 
 ## Operator action
 
