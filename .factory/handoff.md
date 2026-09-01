@@ -2,7 +2,8 @@
 
 **Work order:** `gaze-calibration-card-polish-1`
 **Base:** `c780b097d535be561ec4bba82aa339c8d14a5788`
-**Verdict:** repaired; deployment verification pending the published URL check.
+**Repair commit:** `45c574b242433aa0f6a7bb6bc433858f876fec86`
+**Verdict:** repaired and deployed.
 
 ## What changed
 
@@ -26,7 +27,11 @@
 - Axe runs in the landing/app browser tests for light, dark, forced-colors, and reduced-motion flows; zero serious or critical violations.
 - `verify-url.sh` was not present in this worker image. Equivalent browser checks cover title, lang, one h1, main, alt text, console errors, and focus.
 
-Evidence screenshots: `.factory/evidence/polish-1/landing-390.png` and `.factory/evidence/polish-1/demo-desktop.png`.
+Evidence screenshots: `.factory/evidence/polish-1/landing-390.png`, `.factory/evidence/polish-1/demo-desktop.png`, and the cold live check `.factory/evidence/polish-1/live-demo-390.png`.
+
+## Live check
+
+Deployed with `/opt/fleet/lib/deploy-static.sh gaze-calibration-card dist/site`. Cold checks passed at `https://gaze-calibration-card.sociobot.in/`, `/demo/`, `/privacy/`, `/terms/`, and `/does-not-exist` (HTTP 404). The live `?demo=1` URL redirected to `/demo/#result`, showed the persistent banner and sample h1, and logged no browser console errors. Live headers include CSP with `frame-ancestors 'none'`, `nosniff`, strict referrer policy, and camera-denying permissions policy.
 
 ## Known gaps
 

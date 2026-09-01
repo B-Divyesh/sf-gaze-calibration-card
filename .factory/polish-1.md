@@ -13,3 +13,5 @@
 | F-1-9 | Marked GitHub destinations as external. | landing shell test |
 
 The controller additions map to F-1-1 (44px), F-1-2/F-1-4 (testable wording), F-1-3 (deep links and Back), F-1-4/F-1-5 (registry/assertions), and F-1-6 through F-1-9 (every minor).
+
+Live deployment check: `https://gaze-calibration-card.sociobot.in/?demo=1` cold-opened as `/demo/#result` with the demo banner, completed-sample h1, and no console errors. See `evidence/polish-1/live-demo-390.png`.
