@@ -189,6 +189,8 @@ test("@claim:history-limit keeps no more than 50 local checks", async ({ page })
   await page.getByRole("button", { name: "View past checks" }).click();
   await page.getByRole("button", { name: "Clear history" }).click();
   await page.getByRole("button", { name: "Clear checks" }).click();
+  // Regression: the clear operation must be committed by the confirming click,
+  // not deferred until the dialog's later close event.
   expect(await page.evaluate(() => localStorage.getItem("gaze-calibration-card:checks:v1"))).toBeNull();
 });
 

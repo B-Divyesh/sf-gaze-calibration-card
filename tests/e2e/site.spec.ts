@@ -80,3 +80,12 @@ test("mobile controls meet the 44 pixel touch target", async ({ page, isMobile }
     }
   }
 });
+
+test("phone pages reflow without horizontal scrolling at 200% text size", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "Text zoom is a phone layout check.");
+  for (const route of ["/", "/demo/"]) {
+    await page.goto(`http://127.0.0.1:4173${route}`);
+    await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+    await expect.poll(() => page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }))).toEqual({ scrollWidth: 390, clientWidth: 390 });
+  }
+});

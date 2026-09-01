@@ -441,13 +441,19 @@ function renderHistory() {
 
 function confirmClearHistory() {
   const dialog = document.createElement("dialog");
-  dialog.innerHTML = `<form method="dialog"><h2>Clear all saved checks?</h2><p>This removes ${getChecks().length} local ${getChecks().length === 1 ? "check" : "checks"}. Export anything you need first.</p><div><button class="danger-button" value="confirm">Clear checks</button><button class="secondary-button" value="cancel" autofocus>Keep checks</button></div></form>`;
+  dialog.innerHTML = `<form><h2>Clear all saved checks?</h2><p>This removes ${getChecks().length} local ${getChecks().length === 1 ? "check" : "checks"}. Export anything you need first.</p><div><button class="danger-button" id="confirm-clear-history" type="button">Clear checks</button><button class="secondary-button" id="cancel-clear-history" type="button" autofocus>Keep checks</button></div></form>`;
   document.body.append(dialog);
-  dialog.addEventListener("close", () => {
-    if (dialog.returnValue === "confirm") localStorage.removeItem(isDemo ? DEMO_STORAGE_KEY : STORAGE_KEY);
+  const close = (cleared: boolean) => {
+    // Remove the record in the confirming click itself.  A method=dialog form
+    // closes asynchronously, which previously made an immediate storage read
+    // briefly observe stale history after the user had confirmed deletion.
+    if (cleared) localStorage.removeItem(isDemo ? DEMO_STORAGE_KEY : STORAGE_KEY);
+    dialog.close(cleared ? "confirm" : "cancel");
     dialog.remove();
     navigate("history", true);
-  });
+  };
+  dialog.querySelector("#confirm-clear-history")?.addEventListener("click", () => close(true));
+  dialog.querySelector("#cancel-clear-history")?.addEventListener("click", () => close(false));
   dialog.showModal();
 }
 

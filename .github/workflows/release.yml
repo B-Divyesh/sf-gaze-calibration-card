@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: ubuntu-latest
+          - platform: ubuntu-24.04
             rust_target: x86_64-unknown-linux-gnu
             tauri_args: --target x86_64-unknown-linux-gnu
           - platform: windows-latest
@@ -43,13 +43,24 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_target }}
-      - name: Install Linux system packages
-        if: matrix.platform == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf rpm
+      - name: Install pinned Linux packaging prerequisites
+        if: matrix.platform == 'ubuntu-24.04'
+        run: |
+          set -euxo pipefail
+          sudo apt-get update
+          sudo apt-get install -y file libfuse2t64 libglib2.0-dev libgtk-3-dev libgtk-3-bin libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf rpm
+          # The pinned linuxdeploy GTK plugin looks in libgtk-3-0. Ubuntu 24.04
+          # renamed that package directory to libgtk-3-0t64, returning 127.
+          sudo install -d /usr/lib/x86_64-linux-gnu/libgtk-3-0
+          sudo ln -sfn ../libgtk-3-0t64/gtk-query-immodules-3.0 /usr/lib/x86_64-linux-gnu/libgtk-3-0/gtk-query-immodules-3.0
+          test -x /usr/lib/x86_64-linux-gnu/libgtk-3-0/gtk-query-immodules-3.0
       - run: npm ci
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f
         env:
           GITHUB_TOKEN: ${{ secrets.FACTORY_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          # Run pinned linuxdeploy helpers by extraction, not the runner's FUSE
+          # device. This is required on hosted and container release workers.
+          APPIMAGE_EXTRACT_AND_RUN: "1"
         with:
           tagName: v__VERSION__
           releaseName: Gaze Calibration Card v__VERSION__

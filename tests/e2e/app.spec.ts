@@ -65,3 +65,10 @@ test("app routes load directly and browser back restores the prior screen", asyn
   await expect(page).toHaveURL(/#ready$/);
   await expect(page.getByRole("heading", { name: "Follow each target" })).toBeFocused();
 });
+
+test("the app reflows at 200% text size on a phone", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "Text zoom is a phone layout check.");
+  await page.goto("/");
+  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+  await expect.poll(() => page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }))).toEqual({ scrollWidth: 390, clientWidth: 390 });
+});

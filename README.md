@@ -33,6 +33,7 @@ npm test
 npm run build
 npm run test:claims
 npm run test:e2e
+npm run test:lighthouse
 cargo check --locked --manifest-path src-tauri/Cargo.toml
 cargo test --locked --manifest-path src-tauri/Cargo.toml
 ```
@@ -55,7 +56,7 @@ Both installers verify SHA256 before installing or opening the download. Package
 
 ## Release and deploy
 
-Tag `v*` or dispatch `.github/workflows/release.yml`. GitHub Actions builds macOS, Windows, and Linux packages plus `SHA256SUMS` and `latest.json`.
+Tag `v*` or dispatch `.github/workflows/release.yml`. GitHub Actions builds macOS, Windows, and Linux packages plus `SHA256SUMS` and `latest.json`. The pinned Ubuntu 24.04 release path supplies the GTK helper compatibility link and runs AppImage helpers without a FUSE device; reproduce its Linux AppImage check with `APPIMAGE_EXTRACT_AND_RUN=1 CI=true npm run tauri build -- --bundles appimage` after installing the listed Tauri prerequisites.
 
 Deploy `dist/site` as the static artifact.
 

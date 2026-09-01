@@ -1,6 +1,6 @@
 [package]
 name = "gaze-calibration-card"
-version = "0.1.1"
+version = "0.1.2"
 description = "A private gaze-pointer comparison check"
 authors = ["Sociobot"]
 license = "MIT"

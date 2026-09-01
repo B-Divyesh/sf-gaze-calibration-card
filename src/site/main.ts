@@ -109,5 +109,9 @@ document.querySelector("#copy-command")?.addEventListener("click", async (event)
 
 const build = document.querySelector<HTMLElement>("#build-id");
 if (build) build.textContent = `Build ${__BUILD_ID__}`;
-void setUpDownloads();
-if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => undefined));
+window.addEventListener("load", () => {
+  // Release discovery is helpful but never needed for the first paint. Deferring
+  // it keeps the download control responsive on a throttled phone connection.
+  window.setTimeout(() => { void setUpDownloads(); }, 0);
+  if ("serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+});
