@@ -25,6 +25,7 @@
 - `npx playwright test tests/e2e/site.spec.ts --project=desktop` — 4 PASS, 2 viewport-specific expected skips.
 - `npx playwright test tests/e2e/site.spec.ts --project=mobile` — 6/6 PASS, including all visible targets ≥44px and facts within 844px.
 - Axe runs in the landing/app browser tests for light, dark, forced-colors, and reduced-motion flows; zero serious or critical violations.
+- Lighthouse (live landing, headless Chromium): Performance 100; Accessibility 100.
 - `verify-url.sh` was not present in this worker image. Equivalent browser checks cover title, lang, one h1, main, alt text, console errors, and focus.
 
 Evidence screenshots: `.factory/evidence/polish-1/landing-390.png`, `.factory/evidence/polish-1/demo-desktop.png`, and the cold live check `.factory/evidence/polish-1/live-demo-390.png`.
