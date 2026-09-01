@@ -125,3 +125,46 @@ Release-blocking evidence:
 - Confirm that candidate GitHub CI is red at its browser-suite step. Check that a local Tauri production build compiles the optimized binary but the current `linuxdeploy` GTK plugin returns status 127 while assembling a new AppImage.
 
 Full command results, live request/header evidence, release hashes, route checks, workflow exercises, and remediation steps are in `.factory/verification-4.md`.
+
+---
+
+# Repair 3 — deterministic history, reflow, and exact desktop release
+
+**Work order:** `gaze-calibration-card-repair-3`  
+**Verifier report repaired:** `.factory/verification-4.md`  
+**Repair source / release tag:** `d1a048e1541263a6aa52659f31becd8e09aa3016` / `v0.1.2`  
+**Status:** repaired, CI green, released, and deployed.
+
+## What changed
+
+- Made history clearing synchronous with the user’s **Clear checks** click. The old `method=dialog` close handler removed storage later, so an immediate post-confirmation read could still observe 50 checks. The handler now removes the exact active storage key before closing and rerendering.
+- Added the regression assertion that reads local storage immediately after the confirming click. The exact required command now passes independently and inside the complete suite.
+- Fixed 200% text zoom reflow. Landing and app grid tracks can shrink, long result-preview text wraps at word boundaries, and mobile header/footer children no longer impose a min-content overflow. Browser coverage asserts 390px document width at a 200% root text size for `/`, `/demo/`, and the desktop app UI.
+- Deferred nonessential release discovery until after `load`, preserving the initial phone paint. Added a reproducible three-run mobile Lighthouse gate to CI; it fails below a 90 median performance score or 95 accessibility score.
+- Bumped the desktop product to 0.1.2 and published `v0.1.2` from the exact repair source. The landing’s live GitHub metadata selection now resolves to that release.
+- Repaired Linux AppImage packaging on Ubuntu 24.04: the workflow pins the Tauri action, installs the GTK/FUSE prerequisites, supplies the Ubuntu `libgtk-3-0t64` compatibility path expected by the pinned linuxdeploy GTK plugin, and uses `APPIMAGE_EXTRACT_AND_RUN=1` so the helper does not depend on a FUSE device. A unit regression locks those workflow requirements.
+
+## Verification
+
+- `npm ci` — PASS; 169 packages, `npm audit --audit-level=high` reports 0 vulnerabilities.
+- `npm test` — PASS, 7/7.
+- `npm run lint` — PASS.
+- `npm run build` — PASS; `dist/app` and `dist/site` produced. Current gzip sizes: landing JS 1.63 KB, demo JS 8.21 KB, site CSS 6.45 KB, app JS 8.47 KB, app CSS 4.55 KB.
+- Exact required claims — PASS: `npm run test:claims -- --grep @claim:history-limit --reporter=line` and `npm run test:claims -- --grep @claim:offline-reload --reporter=line` both pass 1/1.
+- `npm run test:e2e -- --reporter=line` — PASS, 52 tests across desktop and 390px mobile (including keyboard, reduced-motion, forced-colors, privacy requests, offline reload, Axe, immediate history clear, and 200% reflow coverage).
+- `npm run test:lighthouse` — PASS. Three mobile runs: Performance/Accessibility `100/100`, `100/100`, `100/100`; median performance 100.
+- `cargo fmt --manifest-path src-tauri/Cargo.toml -- --check`, `cargo check --locked --manifest-path src-tauri/Cargo.toml`, and `cargo test --locked --manifest-path src-tauri/Cargo.toml` — PASS.
+- `APPIMAGE_EXTRACT_AND_RUN=1 CI=true npm run tauri build -- --bundles appimage` — PASS locally. It produced `Gaze Calibration Card_0.1.2_amd64.AppImage` (41,285,982 bytes; local SHA-256 `d5efddb1fca7737bd2510e6beb28edd0afb03286a971409d2486b5a094fcb06f`).
+- GitHub **Quality gates** run `33562321722` — PASS. GitHub **Release desktop apps** run `33562323435` — PASS on Ubuntu 24.04, Windows, macOS arm64, and macOS Intel; its manifest job also passed.
+
+## Release and deployment evidence
+
+- GitHub Release [`v0.1.2`](https://github.com/B-Divyesh/sf-gaze-calibration-card/releases/tag/v0.1.2) targets exact commit `d1a048e1541263a6aa52659f31becd8e09aa3016` and contains AppImage, DEB, RPM, Windows EXE/MSI, both macOS DMGs/app archives, `SHA256SUMS`, and a valid `latest.json`.
+- The released AppImage checksum was streamed and verified: `bca59bf587a305a4648b1eac14e755f6708f71221fc0c228441225147e7705be` matched both `SHA256SUMS` and `latest.json`.
+- Deployed with `/opt/fleet/lib/deploy-static.sh gaze-calibration-card dist/site`. Live footer identity is `Build d1a048e15412`; a fresh live landing resolves its Linux button to the v0.1.2 AppImage URL.
+- Live `/`, `/demo/`, `/privacy/`, and `/terms/` passed desktop and 390px Axe scans with zero serious/critical issues, exactly one h1/main, no console errors, and no normal-size overflow. At 200% root text, live `/` and `/demo/` both remain 390px wide.
+- A fresh live context installed the service worker, reloaded `/demo/` offline successfully with zero console errors. `verify-url.sh` passed the live landing (982 ms observed load; title/lang/h1/main/alts present). Live response headers include CSP frame denial, HSTS, `nosniff`, strict referrer policy, X-Frame-Options, and camera/microphone/geolocation/payment/USB denial; the missing-route response is HTTP 404.
+
+## Known gaps / operator action
+
+No product release blockers remain. Desktop packages are intentionally unsigned. To sign future macOS and Windows packages, an operator must provide `APPLE_CERTIFICATE` and `WINDOWS_CERT_PFX`; unsigned install guidance is already shown on the release and landing page.
