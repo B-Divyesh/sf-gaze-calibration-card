@@ -5,7 +5,7 @@ test("setup is accessible and has no console errors", async ({ page }) => {
   const errors: string[] = [];
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto("/");
-  await expect(page).toHaveTitle("Gaze Calibration Card");
+  await expect(page).toHaveTitle("Gaze Calibration Card — compare your pointer");
   await expect(page.locator("main")).toBeVisible();
   await expect(page.locator("h1")).toHaveCount(1);
   const results = await new AxeBuilder({ page: page as never }).analyze();
@@ -20,7 +20,7 @@ test("keyboard-only user can complete a practice check", async ({ page }) => {
   await page.goto("/");
   await page.getByText("Keyboard practice", { exact: true }).click();
   await page.getByRole("button", { name: "Prepare the check" }).click();
-  await expect(page.getByRole("heading", { name: "Follow each pollen mark" })).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Follow each target" })).toBeFocused();
   await page.getByRole("button", { name: "Start nine-point check" }).click();
   for (let index = 1; index <= 9; index += 1) {
     const target = page.getByRole("button", { name: `Target ${index} of 9` });
@@ -49,4 +49,19 @@ test("pointer check produces and exports a measured result", async ({ page, isMo
   await page.getByRole("button", { name: "Export support report" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/^gaze-check-.*\.html$/);
+});
+
+test("app routes load directly and browser back restores the prior screen", async ({ page }) => {
+  await page.goto("/#history");
+  await expect(page.getByRole("heading", { name: "Past checks" })).toBeVisible();
+  await page.goto("/demo/#setup");
+  await expect(page.getByRole("heading", { name: "Compare your gaze pointer right now" })).toBeVisible();
+  await page.getByRole("button", { name: "Prepare the check" }).click();
+  await expect(page).toHaveURL(/#ready$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/#setup$/);
+  await expect(page.getByRole("heading", { name: "Compare your gaze pointer right now" })).toBeFocused();
+  await page.goForward();
+  await expect(page).toHaveURL(/#ready$/);
+  await expect(page.getByRole("heading", { name: "Follow each target" })).toBeFocused();
 });

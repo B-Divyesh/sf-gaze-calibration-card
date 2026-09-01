@@ -39,6 +39,17 @@ let targetStarted = 0;
 let targetCompleted = false;
 let lastResult: SavedCheck | null = null;
 let isDemo = location.pathname.startsWith("/demo") || new URLSearchParams(location.search).get("demo") === "1";
+type AppRoute = "setup" | "ready" | "check" | "result" | "history" | "stopped";
+
+function routeFor(route: AppRoute) { return `#${route}`; }
+function currentRoute(): AppRoute {
+  const value = location.hash.slice(1);
+  return (["setup", "ready", "check", "result", "history", "stopped"] as const).includes(value as AppRoute) ? value as AppRoute : (isDemo ? "result" : "setup");
+}
+function changeRoute(route: AppRoute, replace = false) {
+  const url = `${location.pathname}${location.search}${routeFor(route)}`;
+  history[replace ? "replaceState" : "pushState"]({ route }, "", url);
+}
 
 const sampleResult: SavedCheck = {
   id: "sample-steady-morning",
@@ -76,21 +87,21 @@ window.addEventListener("offline", updateNetworkStatus);
 
 function shell(content: string, step = "setup") {
   app.innerHTML = `
-    ${isDemo ? `<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved</strong><span>Explore a completed check without changing your history.</span><button id="reset-demo" type="button">Reset demo</button><button id="leave-demo" type="button">Start for real</button></aside>` : ""}
+    ${isDemo ? `<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved</strong><span>Explore a completed check without changing your history.</span><button id="reset-demo" type="button">Reset demo</button><button id="leave-demo" type="button">Start a new check</button></aside>` : ""}
     <header class="app-header">
       <a class="brand" href="#setup" aria-label="Gaze Calibration Card home">
         <svg aria-hidden="true" viewBox="0 0 40 40"><path d="M20 34C19 21 25 12 34 6M19 26c-6 0-10-4-11-9 6-1 11 2 12 7M23 19c0-6 4-10 9-11 1 6-2 11-8 12"/></svg>
-        <span><b>Gaze Calibration Card</b><small>Local reliability check</small></span>
+        <span><b>Gaze Calibration Card</b><small>Local pointer comparison</small></span>
       </a>
       <div class="header-actions">
         <span id="network-status" class="network-note" role="status"></span>
-        <button class="text-button" id="history-button" type="button">Past checks</button>
+        <button class="text-button" id="history-button" type="button">View past checks</button>
       </div>
     </header>
     <p id="view-announcement" class="sr-only" role="status" aria-live="polite"></p>
     <main id="main" data-step="${step}">${content}</main>
-    <footer class="app-footer"><span>Measurements stay on this device.</span><span>Not a medical or hardware diagnostic.</span><span>Build ${__BUILD_ID__}</span></footer>`;
-  document.querySelector("#history-button")?.addEventListener("click", renderHistory);
+    <footer class="app-footer"><span>Measurements stay on this device.</span><span>Not a medical or hardware diagnostic.</span><span><a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a> · Built by Param Factory · Build ${__BUILD_ID__}</span></footer>`;
+  document.querySelector("#history-button")?.addEventListener("click", () => navigate("history"));
   document.querySelector("#reset-demo")?.addEventListener("click", resetDemo);
   document.querySelector("#leave-demo")?.addEventListener("click", leaveDemo);
   updateNetworkStatus();
@@ -112,14 +123,31 @@ function resetDemo() {
   localStorage.removeItem(DEMO_STORAGE_KEY);
   readings = sampleResult.readings;
   lastResult = sampleResult;
-  renderResult(sampleResult);
+  navigate("result", true);
 }
 
 function leaveDemo() {
   localStorage.removeItem(DEMO_STORAGE_KEY);
   isDemo = false;
-  history.replaceState({}, "", location.pathname.startsWith("/demo") ? "/" : location.pathname);
-  renderSetup(true);
+  const nextPath = location.pathname.startsWith("/demo") ? "/" : location.pathname;
+  history.replaceState({ route: "setup" }, "", `${nextPath}#setup`);
+  navigate("setup", true);
+}
+
+function navigate(route: AppRoute, replace = false) {
+  changeRoute(route, replace);
+  renderRoute(route, true);
+}
+
+function renderRoute(route = currentRoute(), focus = false) {
+  const titles: Record<AppRoute, string> = { setup: "Gaze Calibration Card — compare your pointer", ready: "Prepare check — Gaze Calibration Card", check: "Nine targets — Gaze Calibration Card", result: "Pointer comparison — Gaze Calibration Card", history: "Past checks — Gaze Calibration Card", stopped: "Check paused — Gaze Calibration Card" };
+  document.title = isDemo && route === "result" ? "Demo — Gaze Calibration Card" : titles[route];
+  if (route === "history") return renderHistory();
+  if (route === "ready") return renderReady();
+  if (route === "check") return startCheck();
+  if (route === "result") return renderResult(lastResult ?? sampleResult);
+  if (route === "stopped") return renderStopped();
+  return renderSetup(focus);
 }
 
 function updateNetworkStatus() {
@@ -134,8 +162,8 @@ function renderSetup(shouldFocus = false) {
   shell(`
     <section class="intro-grid" aria-labelledby="page-title">
       <div class="intro-copy">
-        <p class="eyebrow">Field check 01 · about 30 seconds</p>
-        <h1 id="page-title">Is your gaze setup steady enough right now?</h1>
+        <p class="eyebrow">Nine-target check · about 30 seconds</p>
+        <h1 id="page-title">Compare your gaze pointer right now</h1>
         <p class="lead">Visit nine marks. We’ll summarize pointer error, directional drift, and dwell steadiness before you begin a demanding interaction.</p>
         <div class="privacy-strip"><b>No camera access.</b> This reads the system pointer your gaze device already controls. Nothing leaves this device.</div>
       </div>
@@ -144,7 +172,7 @@ function renderSetup(shouldFocus = false) {
           <source srcset="/assets/hero-field-guide.avif" type="image/avif">
           <img src="/assets/hero-field-guide.webp" width="900" height="600" alt="Pressed fern curving around nine copper seed specimens arranged like calibration points" fetchpriority="high" decoding="async">
         </picture>
-        <figcaption>Observe nine points, like specimens on a field card.</figcaption>
+        <figcaption>Compare nine targets on one local check.</figcaption>
       </figure>
     </section>
     <section class="setup-sheet" aria-labelledby="setup-heading">
@@ -173,7 +201,7 @@ function renderSetup(shouldFocus = false) {
           </div>
           <div class="form-actions">
             <button class="primary-button" type="submit">Prepare the check <span aria-hidden="true">→</span></button>
-            <button class="secondary-button" id="load-sample" type="button">Load sample project</button>
+            <button class="secondary-button" id="load-sample" type="button">Load sample check</button>
             <span class="action-note">You can stop at any time with Escape.</span>
           </div>
         </form>
@@ -191,10 +219,11 @@ function renderSetup(shouldFocus = false) {
       saveNotes: form.has("saveNotes"),
       keepHistory: form.has("keepHistory")
     };
-    renderReady();
+    navigate("ready");
   });
   document.querySelector("#load-sample")?.addEventListener("click", () => {
     isDemo = true;
+    history.replaceState({ route: "result" }, "", "/demo/#result");
     resetDemo();
   });
   if (shouldFocus) announceAndFocus("Setup ready");
@@ -203,8 +232,8 @@ function renderSetup(shouldFocus = false) {
 function renderReady() {
   shell(`
     <section class="ready-sheet" aria-labelledby="page-title">
-      <p class="eyebrow">Field check 01 · ready</p>
-      <h1 id="page-title">Follow each pollen mark</h1>
+      <p class="eyebrow">Nine-target check · ready</p>
+      <h1 id="page-title">Follow each target</h1>
       <div class="instruction-columns">
         <div><span class="instruction-mark">1</span><h2>Settle</h2><p>Move your gaze pointer into the gold center and hold it there. Each mark records automatically.</p></div>
         <div><span class="instruction-mark">2</span><h2>Stay natural</h2><p>Keep the posture you want to test. Don’t chase a score by moving closer.</p></div>
@@ -216,8 +245,8 @@ function renderReady() {
       </div>
       <p class="device-note">Results depend on your screen, pointer settings, and eye-tracker driver. This companion does not replace the maker’s calibration.</p>
     </section>`, "ready");
-  document.querySelector("#start-check")?.addEventListener("click", startCheck);
-  document.querySelector("#back-setup")?.addEventListener("click", () => renderSetup(true));
+  document.querySelector("#start-check")?.addEventListener("click", () => navigate("check"));
+  document.querySelector("#back-setup")?.addEventListener("click", () => navigate("setup"));
   announceAndFocus("Check instructions ready");
 }
 
@@ -234,7 +263,7 @@ function renderCheck() {
   shell(`
     <section class="check-shell" aria-labelledby="page-title">
       <h1 id="page-title" class="sr-only">Nine-point gaze check</h1>
-      <div class="check-meta"><span>Specimen ${targetIndex + 1} of 9</span><progress value="${targetIndex}" max="9">${targetIndex} of 9</progress><span id="check-instruction">${setup.mode === "keyboard" ? "Tab to the mark, then press Space" : "Rest on the gold center"}</span></div>
+      <div class="check-meta"><span>Target ${targetIndex + 1} of 9</span><progress value="${targetIndex}" max="9">${targetIndex} of 9</progress><span id="check-instruction">${setup.mode === "keyboard" ? "Tab to the target, then press Space" : "Rest on the gold center"}</span></div>
       <div class="target-field" id="target-field">
         ${readings.map((_, index) => `<span class="target-trace" style="--x:${targetPositions[index][0]}%;--y:${targetPositions[index][1]}%" aria-hidden="true"></span>`).join("")}
         <button class="gaze-target" id="gaze-target" type="button" style="--x:${left}%;--y:${top}%" aria-label="Target ${targetIndex + 1} of 9"><span></span></button>
@@ -242,7 +271,7 @@ function renderCheck() {
       </div>
       <button class="stop-button" id="stop-check" type="button">Stop check <kbd>Esc</kbd></button>
     </section>`, "check");
-  document.querySelector("#stop-check")?.addEventListener("click", renderStopped);
+  document.querySelector("#stop-check")?.addEventListener("click", () => navigate("stopped"));
   document.addEventListener("keydown", handleEscape, { once: true });
   const target = document.querySelector<HTMLButtonElement>("#gaze-target");
   if (!target) return;
@@ -307,15 +336,15 @@ function clearTimers() {
 }
 
 function handleEscape(event: KeyboardEvent) {
-  if (event.key === "Escape") renderStopped();
+  if (event.key === "Escape") navigate("stopped");
   else document.addEventListener("keydown", handleEscape, { once: true });
 }
 
 function renderStopped() {
   clearTimers();
-  shell(`<section class="message-sheet" aria-labelledby="page-title"><p class="eyebrow">Check paused</p><h1 id="page-title">No result was saved</h1><p>You stopped after ${Math.min(readings.length, 9)} of 9 marks. Your setup notes remain only in this open session.</p><div class="ready-actions"><button class="primary-button" id="restart" type="button">Start again</button><button class="secondary-button" id="edit-setup" type="button">Edit setup</button></div></section>`, "stopped");
-  document.querySelector("#restart")?.addEventListener("click", startCheck);
-  document.querySelector("#edit-setup")?.addEventListener("click", () => renderSetup(true));
+  shell(`<section class="message-sheet" aria-labelledby="page-title"><p class="eyebrow">Check paused</p><h1 id="page-title">No result was saved</h1><p>You stopped after ${Math.min(readings.length, 9)} of 9 targets. Your setup notes remain only in this open session.</p><div class="ready-actions"><button class="primary-button" id="restart" type="button">Start again</button><button class="secondary-button" id="edit-setup" type="button">Edit setup</button></div></section>`, "stopped");
+  document.querySelector("#restart")?.addEventListener("click", () => navigate("check"));
+  document.querySelector("#edit-setup")?.addEventListener("click", () => navigate("setup"));
   announceAndFocus("Check stopped. No result was saved");
 }
 
@@ -325,7 +354,7 @@ function finishCheck() {
   const savedSetup = setup.saveNotes ? setup : { ...setup, posture: "", glasses: "", lighting: "", notes: "" };
   lastResult = { id: crypto.randomUUID(), date: new Date().toISOString(), setup: savedSetup, metrics, readings };
   if (setup.keepHistory) saveCheck(lastResult);
-  renderResult(lastResult);
+  navigate("result");
 }
 
 function renderResult(result: SavedCheck) {
@@ -339,7 +368,7 @@ function renderResult(result: SavedCheck) {
   shell(`
     <section class="result-sheet" aria-labelledby="page-title">
       <div class="result-heading">
-        <div><p class="eyebrow">Field check complete · ${escapeHtml(formatDate(result.date))}</p><h1 id="page-title">${verdictCopy[0]}</h1><p class="lead">${verdictCopy[1]}</p></div>
+        <div><p class="eyebrow">Check complete · ${escapeHtml(formatDate(result.date))}</p><h1 id="page-title">${verdictCopy[0]}</h1><p class="lead">${verdictCopy[1]}</p></div>
         <div class="verdict-stamp verdict-${metrics.verdict}" aria-label="Verdict: ${verdictCopy[0]}"><span>${metrics.verdict === "reliable" ? "✓" : metrics.verdict === "practice" ? "⌨" : "!"}</span>${verdictCopy[0]}</div>
       </div>
       ${metrics.verdict === "practice" ? `<div class="practice-note"><b>Practice only:</b> Repeat with “Eye-controlled pointer” to measure accuracy and dwell.</div>` : `
@@ -367,8 +396,8 @@ function renderResult(result: SavedCheck) {
       </div>
       <p id="export-status" class="export-status" role="status" aria-live="polite"></p>
     </section>`, "result");
-  document.querySelector("#run-again")?.addEventListener("click", startCheck);
-  document.querySelector("#new-setup")?.addEventListener("click", () => renderSetup(true));
+  document.querySelector("#run-again")?.addEventListener("click", () => navigate("check"));
+  document.querySelector("#new-setup")?.addEventListener("click", () => navigate("setup"));
   document.querySelector("#export-report")?.addEventListener("click", () => exportReport(result));
   announceAndFocus(`Check result: ${verdictCopy[0]}`);
 }
@@ -397,14 +426,14 @@ function renderHistory() {
   clearTimers();
   const checks = getChecks();
   shell(`<section class="history-sheet" aria-labelledby="page-title">
-    <div class="history-heading"><div><p class="eyebrow">Local notebook</p><h1 id="page-title">Past checks</h1><p>Only checks you chose to keep appear here.</p></div>${checks.length ? `<button class="danger-button" id="clear-history" type="button">Clear history</button>` : ""}</div>
-    ${checks.length ? `<ol class="history-list">${checks.map((check) => `<li><button type="button" data-id="${check.id}"><span class="history-verdict ${check.metrics.verdict}">${check.metrics.verdict}</span><b>${escapeHtml(formatDate(check.date))}</b><span>${check.metrics.verdict === "practice" ? "Keyboard practice" : `${Math.round(check.metrics.meanError)} px · ${Math.round(check.metrics.dwellReliability)}% dwell`}</span><small>${escapeHtml([check.setup.posture, check.setup.glasses, check.setup.lighting].filter(Boolean).join(" · ") || "No setup notes saved")}</small></button></li>`).join("")}</ol>` : `<div class="empty-state"><span aria-hidden="true">⌁</span><h2>No saved checks yet</h2><p>Complete a field check and leave “Keep this check” selected.</p></div>`}
+    <div class="history-heading"><div><p class="eyebrow">Local history</p><h1 id="page-title">Past checks</h1><p>Only checks you chose to keep appear here.</p></div>${checks.length ? `<button class="danger-button" id="clear-history" type="button">Clear history</button>` : ""}</div>
+    ${checks.length ? `<ol class="history-list">${checks.map((check) => `<li><button type="button" data-id="${check.id}"><span class="history-verdict ${check.metrics.verdict}">${check.metrics.verdict}</span><b>${escapeHtml(formatDate(check.date))}</b><span>${check.metrics.verdict === "practice" ? "Keyboard practice" : `${Math.round(check.metrics.meanError)} px · ${Math.round(check.metrics.dwellReliability)}% dwell`}</span><small>${escapeHtml([check.setup.posture, check.setup.glasses, check.setup.lighting].filter(Boolean).join(" · ") || "No setup notes saved")}</small></button></li>`).join("")}</ol>` : `<div class="empty-state"><span aria-hidden="true">⌁</span><h2>No saved checks yet</h2><p>Complete a check and leave “Keep this check” selected.</p></div>`}
     <button class="primary-button" id="history-home" type="button">Start a new check</button>
   </section>`, "history");
-  document.querySelector("#history-home")?.addEventListener("click", () => renderSetup(true));
+  document.querySelector("#history-home")?.addEventListener("click", () => navigate("setup"));
   document.querySelectorAll<HTMLButtonElement>("[data-id]").forEach((button) => button.addEventListener("click", () => {
     const check = checks.find((item) => item.id === button.dataset.id);
-    if (check) { lastResult = check; readings = check.readings; renderResult(check); }
+    if (check) { lastResult = check; readings = check.readings; navigate("result"); }
   }));
   document.querySelector("#clear-history")?.addEventListener("click", confirmClearHistory);
   announceAndFocus("Past checks");
@@ -417,7 +446,7 @@ function confirmClearHistory() {
   dialog.addEventListener("close", () => {
     if (dialog.returnValue === "confirm") localStorage.removeItem(isDemo ? DEMO_STORAGE_KEY : STORAGE_KEY);
     dialog.remove();
-    renderHistory();
+    navigate("history", true);
   });
   dialog.showModal();
 }
@@ -435,10 +464,14 @@ function exportReport(result: SavedCheck) {
   if (status) status.textContent = "Report exported. Open it in any browser or attach it to a support message.";
 }
 
-window.addEventListener("hashchange", () => {
-  if (location.hash === "#history") renderHistory();
-  else if (location.hash === "#setup") renderSetup(true);
-});
+window.addEventListener("popstate", () => renderRoute(currentRoute(), true));
 
-if (isDemo) resetDemo();
-else renderSetup();
+if (isDemo) {
+  readings = sampleResult.readings;
+  lastResult = sampleResult;
+  if (!location.hash) history.replaceState({ route: "result" }, "", `${location.pathname}${location.search}#result`);
+  renderRoute(currentRoute(), true);
+} else {
+  if (!location.hash) history.replaceState({ route: "setup" }, "", `${location.pathname}${location.search}#setup`);
+  renderRoute(currentRoute(), true);
+}

@@ -47,6 +47,19 @@ test("demo and policy pages have route-specific metadata", async ({ page }) => {
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /device-dependent limits/);
 });
 
+test("the demo query path enters the isolated sample", async ({ page }) => {
+  await page.goto("http://127.0.0.1:4173/?demo=1");
+  await expect(page).toHaveURL(/\/demo\/#result$/);
+  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
+});
+
+test("phone first screen includes the three plain facts", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "Phone layout check");
+  await page.goto("http://127.0.0.1:4173/");
+  const box = await page.locator(".plain-facts").boundingBox();
+  expect((box?.y ?? Infinity) + (box?.height ?? Infinity)).toBeLessThanOrEqual(844);
+});
+
 test("deployment config defines security, caching, and a real 404", async () => {
   const config = JSON.parse(await readFile("public/staticwebapp.config.json", "utf8"));
   expect(config.globalHeaders["Content-Security-Policy"]).toContain("frame-ancestors 'none'");
@@ -54,14 +67,16 @@ test("deployment config defines security, caching, and a real 404", async () => 
   expect(config.routes.find((route: { route: string }) => route.route === "/assets/*").headers["Cache-Control"]).toContain("immutable");
   expect(config.responseOverrides["404"]).toEqual({ rewrite: "/404.html", statusCode: 404 });
   const notFound = await readFile("dist/site/404.html", "utf8");
-  expect(notFound).toContain("This field card is missing");
+  expect(notFound).toContain("Page not found");
 });
 
-test("mobile links meet the 44 pixel touch target", async ({ page, isMobile }) => {
+test("mobile controls meet the 44 pixel touch target", async ({ page, isMobile }) => {
   test.skip(!isMobile, "Mobile geometry check");
-  await page.goto("http://127.0.0.1:4173/privacy/");
-  for (const link of await page.locator("main a, footer a").all()) {
-    const box = await link.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
+  for (const route of ["/", "/demo/", "/privacy/", "/terms/"]) {
+    await page.goto(`http://127.0.0.1:4173${route}`);
+    for (const control of await page.locator("a:visible, button:visible, summary:visible").all()) {
+      const box = await control.boundingBox();
+      expect(box?.height, `${route}: ${await control.innerText()}`).toBeGreaterThanOrEqual(44);
+    }
   }
 });

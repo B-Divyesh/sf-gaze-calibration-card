@@ -32,7 +32,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .demo-banner { display: flex; min-height: 48px; align-items: center; justify-content: center; gap: 16px; padding: 6px 24px; color: #17251e; background: #e8b963; font-size: 14px; }
 .demo-banner span { color: #48340f; }
-.demo-banner button { min-height: 36px; padding: 4px 10px; border: 1px solid #17251e; border-radius: 3px; color: #17251e; background: transparent; font-weight: 700; cursor: pointer; }
+.demo-banner button { min-height: 44px; padding: 4px 10px; border: 1px solid #17251e; border-radius: 3px; color: #17251e; background: transparent; font-weight: 700; cursor: pointer; }
 .demo-banner button:last-child { color: #fff; background: #17251e; }
 
 .app-header, .app-footer { display: flex; align-items: center; justify-content: space-between; width: min(1180px, calc(100% - 48px)); margin: auto; }
@@ -50,6 +50,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 main { width: min(1180px, calc(100% - 48px)); min-height: calc(100vh - 150px); margin: 0 auto; }
 .app-footer { min-height: 62px; padding: 16px 0; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; }
+.app-footer a { display: inline-flex; min-height: 44px; align-items: center; padding: 6px; }
 h1, h2, h3, p { margin-top: 0; }
 h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; line-height: 1.08; letter-spacing: -.025em; }
 h1 { max-width: 790px; margin-bottom: 20px; font-size: clamp(2.5rem, 5.5vw, 4.8rem); font-weight: 500; }

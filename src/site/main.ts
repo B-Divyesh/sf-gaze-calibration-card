@@ -1,5 +1,7 @@
 declare const __BUILD_ID__: string;
 
+if (new URLSearchParams(location.search).get("demo") === "1") location.replace("/demo/");
+
 const RELEASE_API = "https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest";
 const RELEASE_PAGE = "https://github.com/B-Divyesh/sf-gaze-calibration-card/releases";
 const RELEASE_CACHE_KEY = "gaze-calibration-card:release:v1";
@@ -60,6 +62,7 @@ function cacheManifest(manifest: Manifest) {
 async function getManifest(): Promise<Manifest> {
   const cached = readCachedManifest();
   if (cached) return cached;
+  if (!navigator.onLine) throw new Error("Offline");
   const response = await fetch(RELEASE_API, { headers: { Accept: "application/vnd.github+json" } });
   if (!response.ok) throw new Error("Release metadata unavailable");
   const manifest = toManifest(await response.json() as GitHubRelease);
@@ -90,7 +93,7 @@ async function setUpDownloads() {
       }
     }
     if (!asset?.url && !choice.isMac) throw new Error("Matching build unavailable");
-    if (status) status.textContent = `Version ${manifest.version} · unsigned builds · checksums on the release page`;
+    if (status) status.textContent = `Version ${manifest.version} · a matching download is ready.`;
   } catch {
     if (button) button.href = RELEASE_PAGE;
     if (status) status.textContent = "Downloads are being published. Open the releases page to check again.";

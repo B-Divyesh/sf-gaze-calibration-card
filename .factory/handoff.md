@@ -1,36 +1,37 @@
-# Gaze Calibration Card — review 1 handoff
+# Gaze Calibration Card — polish 1 handoff
 
-**Verdict: FAIL**
+**Work order:** `gaze-calibration-card-polish-1`
+**Base:** `c780b097d535be561ec4bba82aa339c8d14a5788`
+**Verdict:** repaired; deployment verification pending the published URL check.
 
-**Work order:** `gaze-calibration-card-review-1`
+## What changed
 
-**Candidate:** `1cfcde92e101fa0b156a283d7f43da72d64868ec`
+- Replaced unvalidated reliability/readiness wording with local pointer-comparison language.
+- Made `?demo=1` redirect into the isolated sample. Demo has a persistent banner, reset, and Start a new check; demo storage remains separate.
+- Made app screens addressable states with history navigation, reload handling, title updates, focus restoration, and live announcements.
+- Completed claim coverage for demo offline reload, reduced motion, standalone export, pointer sampling, history clearing, bounded timing, and shell-installer checksum mismatch.
+- Unified policy/404 metadata, navigation, footer policy links, build identity, social cards, external-link labels, and 44px targets.
+- Reworked phone ordering so the three plain facts finish in the 390×844 first screen while preserving the field-guide visual identity.
 
-**Reviewed:** 2026-09-01 UTC
+## Verification
 
-## What was done
+- `npm run lint` — PASS.
+- `npm test` — PASS (6 tests).
+- `npm run build` — PASS; produces `dist/app` and `dist/site`. Initial JS gzip: app 8.46 KB; site main 1.61 KB; demo 8.19 KB.
+- Every manifest claim command was run with `npm run test:claims -- --grep @claim:<id>`: 14/14 PASS. The 30-second check met its 24–30s interval.
+- `npx playwright test tests/e2e/app.spec.ts --project=desktop` — 4/4 PASS.
+- `npx playwright test tests/e2e/app.spec.ts --project=mobile` — 3 PASS, 1 expected pointer-path skip.
+- `npx playwright test tests/e2e/site.spec.ts --project=desktop` — 4 PASS, 2 viewport-specific expected skips.
+- `npx playwright test tests/e2e/site.spec.ts --project=mobile` — 6/6 PASS, including all visible targets ≥44px and facts within 844px.
+- Axe runs in the landing/app browser tests for light, dark, forced-colors, and reduced-motion flows; zero serious or critical violations.
+- `verify-url.sh` was not present in this worker image. Equivalent browser checks cover title, lang, one h1, main, alt text, console errors, and focus.
 
-- Reviewed the live site cold at 390×844 and 1440×900.
-- Audited every landing/README sentence and heading for length, jargon, terminology, and action wording.
-- Exercised the one-click sample, reset, leave, export, real/demo storage isolation, request log, camera behavior, and first-visit offline reload.
-- Ran every `.factory/claims.json` command separately from a clean clone.
-- Rechecked every earlier verification finding against the live site and current source.
-- Checked titles, h1/main structure, metadata, 404, headers, cache policy, links, app deep links/history, mobile targets, axe results, and visual identity.
-- Reviewed missed AI/import/export/sync leverage. No AI addition is justified; export already covers the brief’s support handoff.
-- Did not modify product code.
+Evidence screenshots: `.factory/evidence/polish-1/landing-390.png` and `.factory/evidence/polish-1/demo-desktop.png`.
 
-## Verification summary
+## Known gaps
 
-- All 13 listed claim commands exited zero, but five claim assertions are incomplete and public claims remain unlisted; see F-1-4 and F-1-5.
-- `npm test`: PASS, 6/6.
-- `npm run build`: PASS; `dist/app` and `dist/site` produced.
-- Live `verify-url.sh`: PASS for HTTP/title/lang/h1/main/alt/button/console basics.
-- Live axe: zero serious/critical findings on `/`, `/demo/`, `/privacy/`, and `/terms/` at 390 and 1440 px.
-- Live demo isolation/privacy/offline checks: PASS.
-- Live link crawl: expected statuses; missing route returns designed HTTP 404.
+None in the product repair. The PowerShell checksum branch is source-asserted because this Linux worker has no PowerShell runtime; the POSIX mismatch path is executed.
 
-## What remains
+## Deploy
 
-The review records five blocking and four minor findings in `.factory/review-1.md`. The most urgent are the remaining 19-pixel landing privacy target, unvalidated reliability wording, broken app deep links/Back behavior, incomplete claim assertions, and unlisted public claims.
-
-Run the full review again after those findings are addressed. A passing claims command alone is not sufficient where its assertions do not cover the full published claim.
+Deploy `dist/site` with `/opt/fleet/lib/deploy-static.sh gaze-calibration-card dist/site`, then cold-open the landing, demo, policy pages, and a missing route.

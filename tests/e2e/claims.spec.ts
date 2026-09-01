@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { readFile } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const execFileAsync = promisify(execFile);
 
 const siteUrl = "http://127.0.0.1:4173";
 const releaseFixture = {
@@ -24,12 +30,12 @@ test("@claim:sample-demo opens realistic data in isolated storage", async ({ pag
   await page.goto(`${siteUrl}/`);
   await page.evaluate(() => localStorage.setItem("gaze-calibration-card:checks:v1", "real-history-marker"));
   await page.getByRole("link", { name: /Try it with sample data/ }).first().click();
-  await expect(page).toHaveURL(/\/demo\/$/);
+  await expect(page).toHaveURL(/\/demo\/#result$/);
   await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Pattern within comparison guide" })).toBeVisible();
   await page.getByRole("button", { name: "Reset demo" }).click();
   expect(await page.evaluate(() => localStorage.getItem("gaze-calibration-card:checks:v1"))).toBe("real-history-marker");
-  await page.getByRole("button", { name: "Start for real" }).click();
+  await page.getByRole("button", { name: "Start a new check" }).click();
   await expect(page.getByText("Demo — sample data, nothing is saved")).toHaveCount(0);
 });
 
@@ -50,6 +56,16 @@ test("@claim:offline-reload reloads the complete site after one visit", async ({
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Check your gaze pointer before a demanding task" })).toBeVisible();
+  await context.setOffline(false);
+  await page.goto(`${siteUrl}/demo/`);
+  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
+  await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+  await expect.poll(() => page.evaluate(async () => (await (await caches.open("gaze-card-site-v2")).keys()).some((request) => /\/assets\/demo-.*\.js$/.test(request.url)))).toBe(true);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
+  await page.getByRole("button", { name: "Reset demo" }).click();
+  await expect(page.getByRole("heading", { name: "Pattern within comparison guide" })).toBeVisible();
   expect(errors).toEqual([]);
   await context.close();
 });
@@ -84,11 +100,33 @@ test("@claim:pointer-measures reports error, dwell, and directional pattern", as
   await expect(page.getByText(/42/).first()).toBeVisible();
 });
 
-test("@claim:keyboard-high-contrast supports keyboard completion and forced colors", async ({ page }) => {
+test("@claim:pointer-sampling stores a local sample for every target", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Representative system-pointer path runs on desktop.");
   await page.goto("/");
-  await completeKeyboardCheck(page);
-  await expect(page.getByRole("heading", { name: "Keyboard path complete" })).toBeFocused();
+  await page.getByText("Mouse or touch", { exact: true }).click();
+  await page.getByRole("button", { name: "Prepare the check" }).click();
+  await page.getByRole("button", { name: "Start nine-point check" }).click();
+  for (let index = 1; index <= 9; index += 1) {
+    const target = page.getByRole("button", { name: `Target ${index} of 9` });
+    await target.hover();
+    await page.waitForTimeout(700);
+    await target.click();
+  }
+  await expect(page.getByRole("heading", { name: "Pattern within comparison guide" })).toBeVisible();
+  const result = await page.evaluate(() => JSON.parse(localStorage.getItem("gaze-calibration-card:checks:v1") ?? "[]")[0]);
+  expect(result.readings).toHaveLength(9);
+  expect(result.readings.every((reading: { samples: unknown[] }) => reading.samples.length > 0)).toBe(true);
+});
+
+test("@claim:keyboard-high-contrast supports keyboard completion and forced colors", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active", reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.getByText("Keyboard practice", { exact: true }).click();
+  await page.getByRole("button", { name: "Prepare the check" }).click();
+  await page.getByRole("button", { name: "Start nine-point check" }).click();
+  expect(await page.getByRole("button", { name: "Target 1 of 9" }).evaluate((element) => getComputedStyle(element).animationName)).toBe("none");
+  for (let index = 1; index <= 9; index += 1) await page.getByRole("button", { name: `Target ${index} of 9` }).press("Space");
+  await expect(page.getByRole("heading", { name: "Keyboard path complete" })).toBeFocused();
   const results = await new AxeBuilder({ page: page as never }).analyze();
   expect(results.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
 });
@@ -99,7 +137,9 @@ test("@claim:report-export downloads a standalone HTML support report", async ({
   await page.getByRole("button", { name: "Export support report" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/^gaze-check-.*\.html$/);
-  expect(await readFile(await download.path() as string, "utf8")).toContain("Pointer comparison");
+  const report = await readFile(await download.path() as string, "utf8");
+  expect(report).toContain("Pointer comparison");
+  expect(report).not.toMatch(/<(script|img|link)\b|https?:\/\//i);
 });
 
 test("@claim:notes-opt-in stores setup notes only after approval", async ({ page }) => {
@@ -122,6 +162,10 @@ test("@claim:history-limit keeps no more than 50 local checks", async ({ page })
   });
   await completeKeyboardCheck(page);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("gaze-calibration-card:checks:v1") ?? "[]").length)).toBe(50);
+  await page.getByRole("button", { name: "View past checks" }).click();
+  await page.getByRole("button", { name: "Clear history" }).click();
+  await page.getByRole("button", { name: "Clear checks" }).click();
+  expect(await page.evaluate(() => localStorage.getItem("gaze-calibration-card:checks:v1"))).toBeNull();
 });
 
 test("@claim:release-download uses GitHub release metadata and caches it for one hour", async ({ page, browser }) => {
@@ -143,19 +187,27 @@ test("@claim:release-download uses GitHub release metadata and caches it for one
   await mac.close();
 });
 
-test("@claim:installer-checksum verifies installer downloads before use", async () => {
+test("@claim:installer-checksum stops the shell installer before use on a checksum mismatch", async () => {
   const shell = await readFile("public/install.sh", "utf8");
   const powershell = await readFile("public/install.ps1", "utf8");
-  expect(shell).toContain("sha256sum");
+  expect(shell).toMatch(/sha256sum|shasum/);
   expect(shell).toContain("Checksum verification failed");
   expect(powershell).toContain("Get-FileHash");
   expect(powershell).toContain("Checksum verification failed");
+  const directory = await mkdtemp(join(tmpdir(), "gaze-installer-"));
+  await writeFile(join(directory, "latest.json"), JSON.stringify({ assets: { "linux-x86_64": { url: "https://fixture.invalid/app.AppImage", sha256: "0000000000000000000000000000000000000000000000000000000000000000" } } }));
+  await writeFile(join(directory, "curl"), `#!/bin/sh\nset -eu\nout=\"\"\nfor arg in \"$@\"; do out=\"$arg\"; done\ncase \"$out\" in *latest.json) cp \"$FIXTURE_DIR/latest.json\" \"$out\" ;; *) printf corrupt > \"$out\" ;; esac\n`);
+  await writeFile(join(directory, "uname"), "#!/bin/sh\n[ \"$1\" = -s ] && echo Linux || echo x86_64\n");
+  await chmod(join(directory, "curl"), 0o755);
+  await chmod(join(directory, "uname"), 0o755);
+  await expect(execFileAsync("sh", ["public/install.sh"], { env: { ...process.env, HOME: directory, FIXTURE_DIR: directory, PATH: `${directory}:${process.env.PATH}` } })).rejects.toThrow(/Checksum verification failed/);
+  await rm(directory, { recursive: true, force: true });
 });
 
 test("@claim:free-open-source exposes the MIT license and no payment action", async ({ page }) => {
   await page.goto(`${siteUrl}/`);
   await expect(page.getByText("Free and open source", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Source" })).toHaveAttribute("href", /sf-gaze-calibration-card/);
+  await expect(page.getByRole("link", { name: "Source on GitHub (external)" })).toHaveAttribute("href", /sf-gaze-calibration-card/);
   await expect(page.getByText(/buy|subscribe|payment/i)).toHaveCount(0);
   expect(await readFile("LICENSE", "utf8")).toContain("MIT License");
 });
@@ -168,5 +220,7 @@ test("@claim:thirty-second-check completes automatically in about 30 seconds", a
   const started = Date.now();
   await page.getByRole("button", { name: "Start nine-point check" }).click();
   await expect(page.getByRole("heading", { name: "Pattern outside comparison guide" })).toBeVisible({ timeout: 32_000 });
-  expect(Date.now() - started).toBeLessThanOrEqual(30_000);
+  const elapsed = Date.now() - started;
+  expect(elapsed).toBeGreaterThanOrEqual(24_000);
+  expect(elapsed).toBeLessThanOrEqual(30_000);
 });
