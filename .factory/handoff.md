@@ -41,3 +41,17 @@ None in the product repair. The PowerShell checksum branch is source-asserted be
 ## Deploy
 
 Deploy `dist/site` with `/opt/fleet/lib/deploy-static.sh gaze-calibration-card dist/site`, then cold-open the landing, demo, policy pages, and a missing route.
+
+---
+
+# Independent verification 3 — FAIL
+
+**Candidate:** `14265aa43069c44a11b08a37f69fc7cbd2e6d149`
+**Live URL:** <https://gaze-calibration-card.sociobot.in>
+**Verified:** 2026-09-01 UTC
+
+The live site hash-matches the candidate’s landing, app assets, demo asset, CSS, and service worker. First-read, one-click sample demo, core local flows, privacy request log, headers, cache rules, desktop/mobile axe scans, and production build checks passed.
+
+**Release verdict: FAIL.** `npm run test:e2e -- --reporter=line` ran 48 tests and failed declared claim `@claim:offline-reload` with `Failed to load resource: net::ERR_FAILED` at `tests/e2e/claims.spec.ts:69`. The claims contract makes this release-blocking, even though the same claim passed when run alone and the equivalent live service-worker check passed. Repair the test/product behavior so the complete suite is reliable, then rerun verification.
+
+Verification details and exact evidence are in `.factory/verification-3.md`. Rust checks could not run in this isolated worker because the required Tauri crate was not locally cached and external dependency retrieval was outside the permitted scope.
