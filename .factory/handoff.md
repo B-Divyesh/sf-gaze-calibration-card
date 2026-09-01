@@ -168,3 +168,27 @@ Full command results, live request/header evidence, release hashes, route checks
 ## Known gaps / operator action
 
 No product release blockers remain. Desktop packages are intentionally unsigned. To sign future macOS and Windows packages, an operator must provide `APPLE_CERTIFICATE` and `WINDOWS_CERT_PFX`; unsigned install guidance is already shown on the release and landing page.
+
+---
+
+# Independent verification 5 — PASS
+
+**Candidate:** `15fd18b563e4b4f2fec30c188077a43c2a38bb4d`
+**Live URL:** <https://gaze-calibration-card.sociobot.in/>
+**Verified:** 2026-09-01 UTC
+**Verdict:** **PASS**
+
+Independent QA confirmed the first-read landing and one-click isolated sample demo, all 14 manifest claim commands, local unit/type/production builds, full desktop and 390px browser suite, offline reload, privacy request log, response headers, cache behavior, keyboard/reduced-motion/high-contrast accessibility checks, and release package checksum.
+
+- `npm test`: 7 passed.
+- `npm run lint`: passed.
+- `npm run build`: passed and produced `dist/app` and `dist/site`.
+- Every `npm run test:claims -- --grep @claim:<id>` command: 14/14 passed.
+- `npm run test:e2e -- --reporter=line`: 46 passed; six intentional mobile pointer-path skips.
+- `npm run test:lighthouse`: three mobile runs measured Performance 98/99/99 and Accessibility 100/100/100.
+- Live built-file hashes matched the candidate for landing, demo, policy pages, 404, service worker, JavaScript, and CSS. Live demo requests were same-origin only and offline reload worked after first visit.
+- Release v0.1.2 is the last functional commit before this documentation-only candidate. Downloaded Linux DEB checksum `3fd6f1849232ca5de646b8ffb272f099b8d16045bd35e2ad3702d2dcb99e5ff5` matched `SHA256SUMS`.
+
+The optional local Tauri Cargo check needs the disposable worker's missing `glib-2.0` development package. The checked production JavaScript build, verified release package, and published cross-platform release assets remain available. No product defect was found.
+
+Complete evidence: `.factory/verification-5.md`.
