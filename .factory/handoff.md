@@ -100,3 +100,28 @@ Then cold-open `/`, `/demo/`, `/privacy/`, `/terms/`, and a missing route. In a 
 - Live `/sw.js` SHA-256 matched the built artifact: `56d5b3224750167dcaa88b2a54490af8b83d703870c8f0cb9834830d813386c0`.
 - Live `/` returned the expected CSP (`frame-ancestors 'none'`), nosniff, strict referrer policy, frame denial, and camera/microphone/geolocation/payment/USB-denying permissions policy.
 - A fresh live Playwright context loaded landing and demo, waited for a controlling service worker, went offline, and reloaded both routes successfully with zero browser console errors.
+
+---
+
+# Independent verification 4 — FAIL
+
+**Work order:** `gaze-calibration-card-verify-4`
+
+**Candidate:** `b4c64c1a435f345bc0a4fe1a1afc729176fcf8a2`
+
+**Live URL:** <https://gaze-calibration-card.sociobot.in>
+
+**Verified:** 2026-09-01 UTC
+**Verdict:** **FAIL**
+
+Confirm that the cold first screen and one-click isolated sample pass. Check that the live static site hash-matches the candidate, the local unit/type/build/browser/Rust checks otherwise pass, privacy and offline behavior pass, and live Axe scans report no serious or critical findings.
+
+Release-blocking evidence:
+
+- Confirm that the exact required `@claim:history-limit` command failed once because its immediate post-confirmation read still saw the 50-record history. The complete suite and five diagnostic repeats later passed, confirming timing-dependent claim-check behavior; the contract still rejects any failed required claim command.
+- Check that GitHub Release `v0.1.1` targets commit `28a05ab`, while the candidate contains later desktop-app changes. The downloaded AppImage visibly opens the old **“Is your gaze setup steady enough right now?”** screen, not the candidate’s **“Compare your gaze pointer right now”** screen.
+- Confirm that 200% text sizing creates horizontal scrolling: 421px document width at 390px on `/`, and 413px at 390px on `/demo/`.
+- Check that three mobile Lighthouse runs score 87, 88, and 91 for Performance; median 88 is below the required 90.
+- Confirm that candidate GitHub CI is red at its browser-suite step. Check that a local Tauri production build compiles the optimized binary but the current `linuxdeploy` GTK plugin returns status 127 while assembling a new AppImage.
+
+Full command results, live request/header evidence, release hashes, route checks, workflow exercises, and remediation steps are in `.factory/verification-4.md`.
