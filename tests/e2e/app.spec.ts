@@ -21,7 +21,7 @@ test("keyboard-only user can complete a practice check", async ({ page }) => {
   await page.getByText("Keyboard practice", { exact: true }).click();
   await page.getByRole("button", { name: "Prepare the check" }).click();
   await expect(page.getByRole("heading", { name: "Follow each target" })).toBeFocused();
-  await page.getByRole("button", { name: "Start nine-point check" }).click();
+  await page.getByRole("button", { name: "Start nine-target check" }).click();
   for (let index = 1; index <= 9; index += 1) {
     const target = page.getByRole("button", { name: `Target ${index} of 9` });
     await expect(target).toBeFocused();
@@ -29,7 +29,7 @@ test("keyboard-only user can complete a practice check", async ({ page }) => {
   }
   await expect(page.getByRole("heading", { name: "Keyboard path complete" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Keyboard path complete" })).toBeFocused();
-  await expect(page.getByText(/No gaze reliability score/)).toBeVisible();
+  await expect(page.getByText(/No pointer comparison was calculated/)).toBeVisible();
 });
 
 test("pointer check produces and exports a measured result", async ({ page, isMobile }) => {
@@ -37,7 +37,7 @@ test("pointer check produces and exports a measured result", async ({ page, isMo
   await page.goto("/");
   await page.getByText("Mouse or touch", { exact: true }).click();
   await page.getByRole("button", { name: "Prepare the check" }).click();
-  await page.getByRole("button", { name: "Start nine-point check" }).click();
+  await page.getByRole("button", { name: "Start nine-target check" }).click();
   for (let index = 1; index <= 9; index += 1) {
     const target = page.getByRole("button", { name: `Target ${index} of 9` });
     await target.hover();
@@ -55,12 +55,12 @@ test("app routes load directly and browser back restores the prior screen", asyn
   await page.goto("/#history");
   await expect(page.getByRole("heading", { name: "Past checks" })).toBeVisible();
   await page.goto("/demo/#setup");
-  await expect(page.getByRole("heading", { name: "Compare your gaze pointer right now" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Compare your gaze-controlled pointer right now" })).toBeVisible();
   await page.getByRole("button", { name: "Prepare the check" }).click();
   await expect(page).toHaveURL(/#ready$/);
   await page.goBack();
   await expect(page).toHaveURL(/#setup$/);
-  await expect(page.getByRole("heading", { name: "Compare your gaze pointer right now" })).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Compare your gaze-controlled pointer right now" })).toBeFocused();
   await page.goForward();
   await expect(page).toHaveURL(/#ready$/);
   await expect(page.getByRole("heading", { name: "Follow each target" })).toBeFocused();

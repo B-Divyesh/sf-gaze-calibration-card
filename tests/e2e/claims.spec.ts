@@ -23,7 +23,7 @@ const releaseFixture = {
 async function completeKeyboardCheck(page: import("@playwright/test").Page) {
   await page.getByText("Keyboard practice", { exact: true }).click();
   await page.getByRole("button", { name: "Prepare the check" }).click();
-  await page.getByRole("button", { name: "Start nine-point check" }).click();
+  await page.getByRole("button", { name: "Start nine-target check" }).click();
   for (let index = 1; index <= 9; index += 1) await page.getByRole("button", { name: `Target ${index} of 9` }).press("Space");
 }
 
@@ -77,7 +77,7 @@ test("@claim:offline-reload reloads the complete site after one visit", async ({
 
     await context.setOffline(true);
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Check your gaze pointer before a demanding task" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Check your gaze-controlled pointer before a demanding task" })).toBeVisible();
     await context.setOffline(false);
 
     await page.goto(`${siteUrl}/demo/`);
@@ -119,7 +119,7 @@ test("@claim:nine-targets shows one reading for every target", async ({ page }) 
 test("@claim:pointer-measures reports error, dwell, and directional pattern", async ({ page }) => {
   await page.goto(`${siteUrl}/demo/`);
   await expect(page.getByText("Average target error")).toBeVisible();
-  await expect(page.getByText("Dwell reliability")).toBeVisible();
+  await expect(page.getByText("Dwell", { exact: true })).toBeVisible();
   await expect(page.getByText("Directional pattern")).toBeVisible();
   await expect(page.getByText(/42/).first()).toBeVisible();
 });
@@ -129,7 +129,7 @@ test("@claim:pointer-sampling stores a local sample for every target", async ({ 
   await page.goto("/");
   await page.getByText("Mouse or touch", { exact: true }).click();
   await page.getByRole("button", { name: "Prepare the check" }).click();
-  await page.getByRole("button", { name: "Start nine-point check" }).click();
+  await page.getByRole("button", { name: "Start nine-target check" }).click();
   for (let index = 1; index <= 9; index += 1) {
     const target = page.getByRole("button", { name: `Target ${index} of 9` });
     await target.hover();
@@ -147,7 +147,7 @@ test("@claim:keyboard-high-contrast supports keyboard completion and forced colo
   await page.goto("/");
   await page.getByText("Keyboard practice", { exact: true }).click();
   await page.getByRole("button", { name: "Prepare the check" }).click();
-  await page.getByRole("button", { name: "Start nine-point check" }).click();
+  await page.getByRole("button", { name: "Start nine-target check" }).click();
   expect(await page.getByRole("button", { name: "Target 1 of 9" }).evaluate((element) => getComputedStyle(element).animationName)).toBe("none");
   for (let index = 1; index <= 9; index += 1) await page.getByRole("button", { name: `Target ${index} of 9` }).press("Space");
   await expect(page.getByRole("heading", { name: "Keyboard path complete" })).toBeFocused();
@@ -194,7 +194,7 @@ test("@claim:history-limit keeps no more than 50 local checks", async ({ page })
   expect(await page.evaluate(() => localStorage.getItem("gaze-calibration-card:checks:v1"))).toBeNull();
 });
 
-test("@claim:release-download uses GitHub release metadata and caches it for one hour", async ({ browser }) => {
+test("@claim:release-download uses GitHub release metadata, permits only GitHub, and caches it for one hour", async ({ browser }) => {
   // This is a release-metadata unit of behavior, not a service-worker test.
   // Blocking workers here keeps its temporary platform contexts independent of
   // the offline-reload claim and avoids unrelated worker teardown activity.
@@ -203,13 +203,31 @@ test("@claim:release-download uses GitHub release metadata and caches it for one
   try {
     const page = await windows.newPage();
     let apiCalls = 0;
+    const requests: string[] = [];
+    page.on("request", (request) => requests.push(request.url()));
     await page.addInitScript(() => Object.defineProperty(navigator, "userAgentData", { configurable: true, value: { platform: "Windows", getHighEntropyValues: async () => ({ architecture: "x86" }) } }));
     await page.route("https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest", (route) => { apiCalls += 1; return route.fulfill({ json: releaseFixture }); });
     await page.goto(`${siteUrl}/`);
     await expect(page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-x64\.exe$/);
+    expect(requests.every((url) => [siteUrl, "https://api.github.com"].includes(new URL(url).origin))).toBe(true);
+    await page.evaluate(() => {
+      const key = "gaze-calibration-card:release:v1";
+      const cached = JSON.parse(localStorage.getItem(key) ?? "{}");
+      cached.savedAt = Date.now() - (60 * 60 * 1000) + 10_000;
+      localStorage.setItem(key, JSON.stringify(cached));
+    });
     await page.reload();
     await expect(page.locator("#download-status")).toContainText("Version 0.1.1");
     expect(apiCalls).toBe(1);
+    await page.evaluate(() => {
+      const key = "gaze-calibration-card:release:v1";
+      const cached = JSON.parse(localStorage.getItem(key) ?? "{}");
+      cached.savedAt = Date.now() - (60 * 60 * 1000) - 1;
+      localStorage.setItem(key, JSON.stringify(cached));
+    });
+    await page.reload();
+    await expect(page.locator("#download-status")).toContainText("Version 0.1.1");
+    expect(apiCalls).toBe(2);
     await mac.addInitScript(() => Object.defineProperty(navigator, "userAgentData", { configurable: true, value: { platform: "macOS", getHighEntropyValues: async () => ({ architecture: "arm" }) } }));
     await mac.route("https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest", (route) => route.fulfill({ json: releaseFixture }));
     const macPage = await mac.newPage();
@@ -223,11 +241,8 @@ test("@claim:release-download uses GitHub release metadata and caches it for one
 
 test("@claim:installer-checksum stops the shell installer before use on a checksum mismatch", async () => {
   const shell = await readFile("public/install.sh", "utf8");
-  const powershell = await readFile("public/install.ps1", "utf8");
   expect(shell).toMatch(/sha256sum|shasum/);
   expect(shell).toContain("Checksum verification failed");
-  expect(powershell).toContain("Get-FileHash");
-  expect(powershell).toContain("Checksum verification failed");
   const directory = await mkdtemp(join(tmpdir(), "gaze-installer-"));
   await writeFile(join(directory, "latest.json"), JSON.stringify({ assets: { "linux-x86_64": { url: "https://fixture.invalid/app.AppImage", sha256: "0000000000000000000000000000000000000000000000000000000000000000" } } }));
   await writeFile(join(directory, "curl"), `#!/bin/sh\nset -eu\nout=\"\"\nfor arg in \"$@\"; do out=\"$arg\"; done\ncase \"$out\" in *latest.json) cp \"$FIXTURE_DIR/latest.json\" \"$out\" ;; *) printf corrupt > \"$out\" ;; esac\n`);
@@ -236,6 +251,33 @@ test("@claim:installer-checksum stops the shell installer before use on a checks
   await chmod(join(directory, "uname"), 0o755);
   await expect(execFileAsync("sh", ["public/install.sh"], { env: { ...process.env, HOME: directory, FIXTURE_DIR: directory, PATH: `${directory}:${process.env.PATH}` } })).rejects.toThrow(/Checksum verification failed/);
   await rm(directory, { recursive: true, force: true });
+});
+
+test("@claim:comparison-bands-limit keeps the device-dependent, unvalidated limit in the app and exported report", async ({ page }) => {
+  await page.goto(`${siteUrl}/demo/`);
+  const limitation = "Pixel bands are device-dependent and have not been validated across eye trackers or screens.";
+  await expect(page.locator(".validation-note")).toContainText(limitation);
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export support report" }).click();
+  const report = await readFile(await (await downloadPromise).path() as string, "utf8");
+  expect(report).toContain(limitation);
+});
+
+test("@claim:not-a-diagnosis keeps comparison-only language in the app and exported report", async ({ page }) => {
+  await page.goto(`${siteUrl}/demo/`);
+  const limitation = "This comparison does not diagnose a condition or replace your device maker’s calibration.";
+  await expect(page.locator(".validation-note")).toContainText(limitation);
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export support report" }).click();
+  const report = await readFile(await (await downloadPromise).path() as string, "utf8");
+  expect(report).toContain(limitation);
+  expect(report).toContain("It is not a pass or fail.");
+});
+
+test("@claim:unsigned-builds tells visitors that macOS and Windows packages are unsigned", async ({ page }) => {
+  await page.goto(`${siteUrl}/`);
+  await page.getByText("Install another way", { exact: true }).click();
+  await expect(page.getByText("macOS and Windows builds are unsigned. Your system may ask you to confirm the publisher.", { exact: true })).toBeVisible();
 });
 
 test("@claim:free-open-source exposes the MIT license and no payment action", async ({ page }) => {
@@ -252,7 +294,7 @@ test("@claim:thirty-second-check completes automatically in about 30 seconds", a
   await page.getByText("Mouse or touch", { exact: true }).click();
   await page.getByRole("button", { name: "Prepare the check" }).click();
   const started = Date.now();
-  await page.getByRole("button", { name: "Start nine-point check" }).click();
+  await page.getByRole("button", { name: "Start nine-target check" }).click();
   await expect(page.getByRole("heading", { name: "Pattern outside comparison guide" })).toBeVisible({ timeout: 32_000 });
   const elapsed = Date.now() - started;
   expect(elapsed).toBeGreaterThanOrEqual(24_000);

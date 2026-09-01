@@ -71,6 +71,29 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.tauri_args }}
+      - name: Verify unsigned desktop packages
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path src-tauri/target -Recurse -Filter "*.exe" | Where-Object { $_.Name -match "setup|Gaze" } | Select-Object -First 1
+          if (-not $installer) { throw "Windows installer was not produced." }
+          $signature = Get-AuthenticodeSignature -FilePath $installer.FullName
+          if ($signature.Status -ne "NotSigned") { throw "Expected an unsigned Windows package; got $($signature.Status)." }
+          Write-Host "Verified unsigned Windows package: $($installer.Name)"
+      - name: Verify unsigned desktop packages
+        if: startsWith(matrix.platform, 'macos')
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$(find src-tauri/target -type d -name '*.app' -print -quit)"
+          test -n "$APP"
+          signing="$(codesign -dv --verbose=4 "$APP" 2>&1 || true)"
+          if grep -q 'Authority=Developer ID' <<<"$signing"; then
+            echo "Expected an unsigned macOS package." >&2
+            exit 1
+          fi
+          grep -Eqi 'not signed|code object is not signed|Signature=adhoc' <<<"$signing"
+          echo "Verified unsigned macOS package: $APP"
 
   manifest:
     needs: build

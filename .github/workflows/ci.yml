@@ -20,3 +20,12 @@ jobs:
       - run: npm run build
       - run: npm run test:e2e
       - run: npm run test:lighthouse
+      - run: npm run test:unsigned-builds
+
+  windows-installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject a corrupt download before opening it
+        shell: pwsh
+        run: ./tests/installer-checksum.ps1

@@ -100,7 +100,7 @@ function shell(content: string, step = "setup") {
     </header>
     <p id="view-announcement" class="sr-only" role="status" aria-live="polite"></p>
     <main id="main" data-step="${step}">${content}</main>
-    <footer class="app-footer"><span>Measurements stay on this device.</span><span>Not a medical or hardware diagnostic.</span><span><a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a> · Built by Param Factory · Build ${__BUILD_ID__}</span></footer>`;
+    <footer class="app-footer"><span>Measurements stay on this device.</span><span>This comparison is not a diagnosis.</span><span><a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a> · Built by Param Factory · Build ${__BUILD_ID__}</span></footer>`;
   document.querySelector("#history-button")?.addEventListener("click", () => navigate("history"));
   document.querySelector("#reset-demo")?.addEventListener("click", resetDemo);
   document.querySelector("#leave-demo")?.addEventListener("click", leaveDemo);
@@ -163,9 +163,9 @@ function renderSetup(shouldFocus = false) {
     <section class="intro-grid" aria-labelledby="page-title">
       <div class="intro-copy">
         <p class="eyebrow">Nine-target check · about 30 seconds</p>
-        <h1 id="page-title">Compare your gaze pointer right now</h1>
-        <p class="lead">Visit nine marks. We’ll summarize pointer error, directional drift, and dwell steadiness before you begin a demanding interaction.</p>
-        <div class="privacy-strip"><b>No camera access.</b> This reads the system pointer your gaze device already controls. Nothing leaves this device.</div>
+        <h1 id="page-title">Compare your gaze-controlled pointer right now</h1>
+        <p class="lead">Visit nine targets. We’ll summarize pointer error, directional drift, and dwell before you begin a demanding interaction.</p>
+        <div class="privacy-strip"><b>No camera access.</b> This reads the system pointer your gaze system already controls. Nothing leaves this device.</div>
       </div>
       <figure class="hero-figure">
         <picture>
@@ -182,10 +182,10 @@ function renderSetup(shouldFocus = false) {
         <p>Optional details make a saved report useful to you, a caregiver, or device support.</p>
         <form id="setup-form">
           <fieldset>
-            <legend>How will you complete the marks?</legend>
+            <legend>How will you complete the targets?</legend>
             <div class="choice-grid">
-              <label class="choice"><input type="radio" name="mode" value="gaze-pointer" checked><span><b>Eye-controlled pointer</b><small>Recommended. Your device moves the system pointer.</small></span></label>
-              <label class="choice"><input type="radio" name="mode" value="pointer"><span><b>Mouse or touch</b><small>Explore the check without a gaze device.</small></span></label>
+              <label class="choice"><input type="radio" name="mode" value="gaze-pointer" checked><span><b>Gaze-controlled pointer</b><small>Recommended. Your device moves the system pointer.</small></span></label>
+              <label class="choice"><input type="radio" name="mode" value="pointer"><span><b>Mouse or touch</b><small>Explore the check without a gaze system.</small></span></label>
               <label class="choice"><input type="radio" name="mode" value="keyboard"><span><b>Keyboard practice</b><small>Verify access with Tab and Space; no gaze score.</small></span></label>
             </div>
           </fieldset>
@@ -235,15 +235,15 @@ function renderReady() {
       <p class="eyebrow">Nine-target check · ready</p>
       <h1 id="page-title">Follow each target</h1>
       <div class="instruction-columns">
-        <div><span class="instruction-mark">1</span><h2>Settle</h2><p>Move your gaze pointer into the gold center and hold it there. Each mark records automatically.</p></div>
+        <div><span class="instruction-mark">1</span><h2>Settle</h2><p>Move your pointer into the gold center and hold it there. Each target records automatically.</p></div>
         <div><span class="instruction-mark">2</span><h2>Stay natural</h2><p>Keep the posture you want to test. Don’t chase a score by moving closer.</p></div>
         <div><span class="instruction-mark">3</span><h2>Pause if needed</h2><p>Press Escape to stop. Keyboard practice uses Tab, then Space or Enter.</p></div>
       </div>
       <div class="ready-actions">
-        <button class="primary-button" id="start-check" type="button">Start nine-point check <span aria-hidden="true">→</span></button>
+        <button class="primary-button" id="start-check" type="button">Start nine-target check <span aria-hidden="true">→</span></button>
         <button class="secondary-button" id="back-setup" type="button">Back to setup</button>
       </div>
-      <p class="device-note">Results depend on your screen, pointer settings, and eye-tracker driver. This companion does not replace the maker’s calibration.</p>
+      <p class="device-note">Results depend on your screen, pointer settings, and eye-tracker driver. This comparison does not replace the device maker’s calibration.</p>
     </section>`, "ready");
   document.querySelector("#start-check")?.addEventListener("click", () => navigate("check"));
   document.querySelector("#back-setup")?.addEventListener("click", () => navigate("setup"));
@@ -262,7 +262,7 @@ function renderCheck() {
   const [left, top] = targetPositions[targetIndex];
   shell(`
     <section class="check-shell" aria-labelledby="page-title">
-      <h1 id="page-title" class="sr-only">Nine-point gaze check</h1>
+      <h1 id="page-title" class="sr-only">Nine-target pointer check</h1>
       <div class="check-meta"><span>Target ${targetIndex + 1} of 9</span><progress value="${targetIndex}" max="9">${targetIndex} of 9</progress><span id="check-instruction">${setup.mode === "keyboard" ? "Tab to the target, then press Space" : "Rest on the gold center"}</span></div>
       <div class="target-field" id="target-field">
         ${readings.map((_, index) => `<span class="target-trace" style="--x:${targetPositions[index][0]}%;--y:${targetPositions[index][1]}%" aria-hidden="true"></span>`).join("")}
@@ -362,8 +362,8 @@ function renderResult(result: SavedCheck) {
   const verdictCopy = {
     reliable: ["Pattern within comparison guide", "The pointer stayed inside this app’s comparison bands."],
     borderline: ["Mixed comparison pattern", "Drift or dwell crossed one of this app’s comparison bands."],
-    unreliable: ["Pattern outside comparison guide", metrics.sampleCount ? "The pointer crossed this app’s error or dwell bands." : "No recent pointer movement was detected. Make sure your gaze device moves the system pointer."],
-    practice: ["Keyboard path complete", "Keyboard access works. No gaze reliability score was calculated."]
+    unreliable: ["Pattern outside comparison guide", metrics.sampleCount ? "The pointer crossed this app’s error or dwell bands." : "No recent pointer movement was detected. Make sure your gaze system moves the pointer."],
+    practice: ["Keyboard path complete", "Keyboard access works. No pointer comparison was calculated."]
   }[metrics.verdict];
   shell(`
     <section class="result-sheet" aria-labelledby="page-title">
@@ -371,23 +371,23 @@ function renderResult(result: SavedCheck) {
         <div><p class="eyebrow">Check complete · ${escapeHtml(formatDate(result.date))}</p><h1 id="page-title">${verdictCopy[0]}</h1><p class="lead">${verdictCopy[1]}</p></div>
         <div class="verdict-stamp verdict-${metrics.verdict}" aria-label="Verdict: ${verdictCopy[0]}"><span>${metrics.verdict === "reliable" ? "✓" : metrics.verdict === "practice" ? "⌨" : "!"}</span>${verdictCopy[0]}</div>
       </div>
-      ${metrics.verdict === "practice" ? `<div class="practice-note"><b>Practice only:</b> Repeat with “Eye-controlled pointer” to measure accuracy and dwell.</div>` : `
+      ${metrics.verdict === "practice" ? `<div class="practice-note"><b>Practice only:</b> Repeat with “Gaze-controlled pointer” to measure pointer error and dwell.</div>` : `
       <div class="metrics-grid" aria-label="Measurement summary">
         <div><span>Average target error</span><strong>${Math.round(metrics.meanError)}<small> px</small></strong><p>${metrics.meanError <= 80 ? "Inside the ≤80 px comparison band" : "Outside the ≤80 px comparison band"}</p></div>
-        <div><span>Dwell reliability</span><strong>${Math.round(metrics.dwellReliability)}<small>%</small></strong><p>${metrics.dwellReliability >= 75 ? "Steady on most samples" : "Pointer wandered or went quiet"}</p></div>
+        <div><span>Dwell</span><strong>${Math.round(metrics.dwellReliability)}<small>%</small></strong><p>${metrics.dwellReliability >= 75 ? "Within the dwell comparison band" : "Outside the dwell comparison band"}</p></div>
         <div><span>Directional pattern</span><strong class="drift-value">${escapeHtml(describeDrift(metrics.horizontalDrift, metrics.verticalDrift))}</strong><p>${metrics.sampleCount} local pointer samples</p></div>
       </div>`}
-      <p class="validation-note"><b>Use this as a comparison, not a pass or fail.</b> These pixel bands have not been validated across eye trackers or screen sizes.</p>
+      <p class="validation-note"><b>Use this as a comparison, not a pass or fail.</b> Pixel bands are device-dependent and have not been validated across eye trackers or screens. This comparison does not diagnose a condition or replace your device maker’s calibration.</p>
       <div class="result-detail">
-        <div class="result-map" role="img" aria-label="Nine-point map. ${Math.round(metrics.meanError)} pixel average error and ${Math.round(metrics.dwellReliability)} percent dwell reliability.">
+        <div class="result-map" role="img" aria-label="Nine-target map. ${Math.round(metrics.meanError)} pixel average error and ${Math.round(metrics.dwellReliability)} percent dwell.">
           ${readings.map((reading, index) => {
             const error = reading.samples.length ? reading.samples.reduce((sum, sample) => sum + Math.hypot(sample.x - reading.targetX, sample.y - reading.targetY), 0) / reading.samples.length : 999;
             const state = error <= 80 ? "good" : error <= 125 ? "warn" : "bad";
             return `<span class="map-point ${state}" style="--x:${targetPositions[index][0]}%;--y:${targetPositions[index][1]}%"><i>${index + 1}</i><b>${error >= 999 ? "No sample" : `${Math.round(error)} px`}</b></span>`;
           }).join("")}
-          <span class="map-caption">Screen field · per-mark mean error</span>
+          <span class="map-caption">Screen field · per-target mean error</span>
         </div>
-        <div class="next-note"><h2>What to do next</h2>${nextSteps(metrics)}<p class="threshold-note">Comparison bands: ≤80 px and ≥75% dwell; mixed: ≤125 px and ≥55%. Unvalidated, device-dependent, and not diagnostic.</p></div>
+        <div class="next-note"><h2>What to do next</h2>${nextSteps(metrics)}<p class="threshold-note">Comparison bands: ≤80 px and ≥75% dwell; mixed: ≤125 px and ≥55%. The bands are device-dependent, unvalidated, and not diagnostic.</p></div>
       </div>
       <div class="result-actions">
         <button class="primary-button" id="run-again" type="button">Check again</button>
@@ -404,9 +404,9 @@ function renderResult(result: SavedCheck) {
 
 function nextSteps(metrics: Metrics): string {
   if (metrics.verdict === "reliable") return "<p>Compare this result with your own comfortable sessions before starting a demanding task.</p>";
-  if (metrics.verdict === "practice") return "<p>Choose the eye-controlled pointer mode when your gaze device is ready.</p>";
+  if (metrics.verdict === "practice") return "<p>Choose the gaze-controlled pointer mode when your gaze system is ready.</p>";
   if (!metrics.sampleCount) return "<p>Confirm that the tracker is on and controlling the pointer, then repeat the check.</p>";
-  const steps = ["Run your device maker’s calibration", "Return to the posture recorded for a good check"];
+  const steps = ["Run your device maker’s calibration", "Return to the posture from a comfortable prior check"];
   if (Math.abs(metrics.horizontalDrift) > 24 || Math.abs(metrics.verticalDrift) > 24) steps.unshift("Re-center the display and tracker toward your usual head position");
   return `<ul>${steps.map((item) => `<li>${item}</li>`).join("")}</ul>`;
 }
@@ -427,7 +427,7 @@ function renderHistory() {
   const checks = getChecks();
   shell(`<section class="history-sheet" aria-labelledby="page-title">
     <div class="history-heading"><div><p class="eyebrow">Local history</p><h1 id="page-title">Past checks</h1><p>Only checks you chose to keep appear here.</p></div>${checks.length ? `<button class="danger-button" id="clear-history" type="button">Clear history</button>` : ""}</div>
-    ${checks.length ? `<ol class="history-list">${checks.map((check) => `<li><button type="button" data-id="${check.id}"><span class="history-verdict ${check.metrics.verdict}">${check.metrics.verdict}</span><b>${escapeHtml(formatDate(check.date))}</b><span>${check.metrics.verdict === "practice" ? "Keyboard practice" : `${Math.round(check.metrics.meanError)} px · ${Math.round(check.metrics.dwellReliability)}% dwell`}</span><small>${escapeHtml([check.setup.posture, check.setup.glasses, check.setup.lighting].filter(Boolean).join(" · ") || "No setup notes saved")}</small></button></li>`).join("")}</ol>` : `<div class="empty-state"><span aria-hidden="true">⌁</span><h2>No saved checks yet</h2><p>Complete a check and leave “Keep this check” selected.</p></div>`}
+    ${checks.length ? `<ol class="history-list">${checks.map((check) => `<li><button type="button" data-id="${check.id}"><span class="history-verdict ${check.metrics.verdict}">${historyLabel(check.metrics.verdict)}</span><b>${escapeHtml(formatDate(check.date))}</b><span>${check.metrics.verdict === "practice" ? "Keyboard practice" : `${Math.round(check.metrics.meanError)} px · ${Math.round(check.metrics.dwellReliability)}% dwell`}</span><small>${escapeHtml([check.setup.posture, check.setup.glasses, check.setup.lighting].filter(Boolean).join(" · ") || "No setup notes saved")}</small></button></li>`).join("")}</ol>` : `<div class="empty-state"><span aria-hidden="true">⌁</span><h2>No saved checks yet</h2><p>Complete a check and leave “Keep this check” selected.</p></div>`}
     <button class="primary-button" id="history-home" type="button">Start a new check</button>
   </section>`, "history");
   document.querySelector("#history-home")?.addEventListener("click", () => navigate("setup"));
@@ -437,6 +437,10 @@ function renderHistory() {
   }));
   document.querySelector("#clear-history")?.addEventListener("click", confirmClearHistory);
   announceAndFocus("Past checks");
+}
+
+function historyLabel(verdict: Metrics["verdict"]): string {
+  return { reliable: "within guide", borderline: "mixed pattern", unreliable: "outside guide", practice: "practice" }[verdict];
 }
 
 function confirmClearHistory() {
@@ -459,7 +463,7 @@ function confirmClearHistory() {
 
 function exportReport(result: SavedCheck) {
   const notes = result.setup.saveNotes ? [result.setup.posture, result.setup.glasses, result.setup.lighting, result.setup.notes].filter(Boolean).map(escapeHtml).join(" · ") : "Not saved by user";
-  const report = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Gaze check report ${escapeHtml(result.date)}</title><style>body{font:17px/1.55 system-ui;color:#17251e;max-width:760px;margin:48px auto;padding:0 24px}h1{font:700 38px Georgia,serif}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:12px;border-bottom:1px solid #aaa}.note{background:#f3f0e5;padding:16px}small{color:#59685f}</style><main><p>Gaze Calibration Card · support report</p><h1>Pointer comparison</h1><p>${escapeHtml(formatDate(result.date))}</p><table><tr><th>Input</th><td>${escapeHtml(result.setup.mode)}</td></tr><tr><th>Average target error</th><td>${Math.round(result.metrics.meanError)} px</td></tr><tr><th>Dwell reliability</th><td>${Math.round(result.metrics.dwellReliability)}%</td></tr><tr><th>Directional pattern</th><td>${escapeHtml(describeDrift(result.metrics.horizontalDrift, result.metrics.verticalDrift))}</td></tr><tr><th>Pointer samples</th><td>${result.metrics.sampleCount}</td></tr><tr><th>Setup notes</th><td>${notes}</td></tr></table><p class="note"><b>Interpretation:</b> The app compares results with unvalidated pixel bands: ≤80 px mean error and ≥75% dwell, or a mixed band of ≤125 px and ≥55%. Results are device- and display-dependent. This is not a pass, medical diagnostic, or replacement for the device maker’s calibration.</p><small>Generated locally by Gaze Calibration Card. No camera frames or data were uploaded.</small></main></html>`;
+  const report = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Gaze check report ${escapeHtml(result.date)}</title><style>body{font:17px/1.55 system-ui;color:#17251e;max-width:760px;margin:48px auto;padding:0 24px}h1{font:700 38px Georgia,serif}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:12px;border-bottom:1px solid #aaa}.note{background:#f3f0e5;padding:16px}small{color:#59685f}</style><main><p>Gaze Calibration Card · support report</p><h1>Pointer comparison</h1><p>${escapeHtml(formatDate(result.date))}</p><table><tr><th>Input</th><td>${escapeHtml(result.setup.mode)}</td></tr><tr><th>Average target error</th><td>${Math.round(result.metrics.meanError)} px</td></tr><tr><th>Dwell</th><td>${Math.round(result.metrics.dwellReliability)}%</td></tr><tr><th>Directional pattern</th><td>${escapeHtml(describeDrift(result.metrics.horizontalDrift, result.metrics.verticalDrift))}</td></tr><tr><th>Pointer samples</th><td>${result.metrics.sampleCount}</td></tr><tr><th>Setup notes</th><td>${notes}</td></tr></table><p class="note"><b>Interpretation:</b> Pixel bands are device-dependent and have not been validated across eye trackers or screens. The bands are ≤80 px mean error and ≥75% dwell, or a mixed band of ≤125 px and ≥55%. This comparison does not diagnose a condition or replace your device maker’s calibration. It is not a pass or fail.</p><small>Generated locally by Gaze Calibration Card. No camera frames or data were uploaded.</small></main></html>`;
   const url = URL.createObjectURL(new Blob([report], { type: "text/html" }));
   const link = document.createElement("a");
   link.href = url;

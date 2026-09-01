@@ -1,8 +1,8 @@
 # Gaze Calibration Card
 
-Compare an eye-controlled pointer across nine targets before a demanding task. It is for people who rely on eye input.
+Compare a gaze-controlled pointer across nine targets before a demanding task. It is for people who rely on eye input.
 
-The report shows target error, directional drift, and dwell. Pixel bands are device-dependent comparison guides. They are not validated across eye trackers or screen sizes. The app does not certify a setup, replace maker calibration, or provide a diagnosis.
+The report shows target error, directional drift, and dwell. Pixel bands are device-dependent and have not been validated across eye trackers or screens. This comparison does not diagnose a condition or replace your device maker’s calibration.
 
 ## Try the sample
 
@@ -14,7 +14,7 @@ See [.factory/demo.md](.factory/demo.md) for the sample and isolation details. E
 
 The app records ordinary system pointer coordinates during each target.
 
-- The eye-controlled pointer mode visits nine targets automatically in about 30 seconds.
+- The gaze-controlled pointer mode visits nine targets automatically in about 30 seconds.
 - Keyboard practice supports Tab, Space, and Enter without producing a gaze score.
 - Setup notes are stored only after approval.
 - Local history keeps at most 50 checks and can be cleared.
@@ -52,11 +52,15 @@ curl -fsSL https://gaze-calibration-card.sociobot.in/install.sh | sh
 irm https://gaze-calibration-card.sociobot.in/install.ps1 | iex
 ```
 
-Both installers verify SHA256 before installing or opening the download. Packages are unsigned: on macOS, right-click and choose **Open** if Gatekeeper blocks the app. Windows may show an unknown-publisher confirmation.
+Both installers verify SHA256 before installing or opening the download. macOS and Windows builds are unsigned. Your system may ask you to confirm the publisher.
 
 ## Release and deploy
 
-Tag `v*` or dispatch `.github/workflows/release.yml`. GitHub Actions builds macOS, Windows, and Linux packages plus `SHA256SUMS` and `latest.json`. The pinned Ubuntu 24.04 release path supplies the GTK helper compatibility link and runs AppImage helpers without a FUSE device; reproduce its Linux AppImage check with `APPIMAGE_EXTRACT_AND_RUN=1 CI=true npm run tauri build -- --bundles appimage` after installing the listed Tauri prerequisites.
+Tag `v*` or dispatch `.github/workflows/release.yml`. GitHub Actions builds macOS, Windows, and Linux packages plus `SHA256SUMS` and `latest.json`.
+
+The Ubuntu release job supplies the GTK helper compatibility link. It runs AppImage helpers without a FUSE device.
+
+After installing Tauri prerequisites, run `APPIMAGE_EXTRACT_AND_RUN=1 CI=true npm run tauri build -- --bundles appimage` to reproduce the Linux AppImage check.
 
 Deploy `dist/site` as the static artifact.
 
