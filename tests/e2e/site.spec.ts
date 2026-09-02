@@ -25,6 +25,8 @@ test("landing page has a complete accessible shell", async ({ page }) => {
   await expect(page.locator(".hero .lead")).toHaveText("For people who rely on eye input, compare today’s pointer pattern after posture, glasses, light, or fatigue changes.");
   await expect(page.locator(".plain-facts li")).toHaveText(["No camera access or account", "Sample reloads offline after first visit", "Free and open source"]);
   await expect(page.getByRole("link", { name: /Try it with sample data/ }).first()).toBeVisible();
+  await expect(page.locator(".walkthrough-grid figcaption").last()).toContainText("Dwell shows how steadily the pointer stays on each target.");
+  await expect(page.getByRole("link", { name: "Source on GitHub (external)", exact: true })).toHaveAttribute("href", "https://github.com/B-Divyesh/sf-gaze-calibration-card");
   const download = page.getByRole("link", { name: /Download the app/ });
   await expect(download).toBeVisible();
   await expect(page.locator("#download-status")).toContainText("Version 0.1.1");
