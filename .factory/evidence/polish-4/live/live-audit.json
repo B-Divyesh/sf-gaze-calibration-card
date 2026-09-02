@@ -1,0 +1,74 @@
+{
+  "base": "https://gaze-calibration-card.sociobot.in",
+  "checkedAt": "2026-09-02T04:37:57.000Z",
+  "routes": [
+    {
+      "path": "/",
+      "status": 200,
+      "title": "Gaze Calibration Card — compare pointer patterns",
+      "seriousAxeViolations": 0,
+      "consoleErrors": 0
+    },
+    {
+      "path": "/check/",
+      "status": 200,
+      "title": "Gaze Calibration Card — compare your pointer",
+      "seriousAxeViolations": 0,
+      "consoleErrors": 0
+    },
+    {
+      "path": "/demo/",
+      "status": 200,
+      "title": "Demo — Gaze Calibration Card",
+      "seriousAxeViolations": 0,
+      "consoleErrors": 0
+    },
+    {
+      "path": "/privacy/",
+      "status": 200,
+      "title": "Privacy — Gaze Calibration Card",
+      "seriousAxeViolations": 0,
+      "consoleErrors": 0
+    },
+    {
+      "path": "/terms/",
+      "status": 200,
+      "title": "Terms — Gaze Calibration Card",
+      "seriousAxeViolations": 0,
+      "consoleErrors": 0
+    },
+    {
+      "path": "/404.html",
+      "status": 200,
+      "title": "Page not found — Gaze Calibration Card",
+      "seriousAxeViolations": 0,
+      "consoleErrors": 0
+    }
+  ],
+  "demo": {
+    "queryEntry": "/demo/#result",
+    "banner": true,
+    "resetPreservedRealMarker": true,
+    "exit": "/check/#setup",
+    "reloadStayedReal": true,
+    "onlySameOriginRequests": true
+  },
+  "mobile": {
+    "viewport": "390x844",
+    "factsBottom": 815,
+    "primaryWidth": 358,
+    "primaryHeight": 64,
+    "sharedNavigation": true,
+    "horizontalOverflowAt200Percent": false
+  },
+  "offline": {
+    "landingReload": true,
+    "demoReloadAndReset": true
+  },
+  "headers": {
+    "contentSecurityPolicy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+    "xContentTypeOptions": "nosniff",
+    "xFrameOptions": "DENY",
+    "missingRouteStatus": 404
+  }
+}
