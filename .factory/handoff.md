@@ -1,5 +1,14 @@
 # Gaze Calibration Card — polish 2 handoff
 
+## Independent verification 7 — PASS (2026-09-02 UTC)
+
+Candidate `c3a134886428c47e8025182c1f5e46d90e33d7fc` **PASSED** independent QA at <https://gaze-calibration-card.sociobot.in/>. The live footer reports `Build c3a134886428` and the live/local `main-Cnk3hwaf.js` SHA-256 matches (`636171e536d6d328c6c0656b4c283cbe6e0a3e930599a654581abd8d2b45019d`).
+
+- All 17 declared claim tests passed; unit tests, TypeScript lint, exact production build, full E2E suite (52 passed; 6 expected skips), unsigned-build test, and Lighthouse (99 performance / 100 accessibility ×3) passed.
+- Live desktop and 390px mobile landing/demo had no console/page errors or Axe serious/critical issues. Privacy request logging observed only product-origin requests in demo, plus the permitted GitHub release-metadata request on landing.
+- Fresh v0.1.3 AMD64 DEB checksum matched `SHA256SUMS`; package metadata is `gaze-calibration-card` 0.1.3 amd64.
+- `cargo test --locked --manifest-path src-tauri/Cargo.toml` remains unavailable only because this worker lacks host `glib-2.0` development files. See `.factory/verification-7.md` for complete evidence and the non-defect limitation.
+
 ## Delivered
 
 - Closed every finding in `.factory/review-1.md` and `.factory/review-2.md`; the finding-by-finding matrix is in `.factory/polish-2.md`.
