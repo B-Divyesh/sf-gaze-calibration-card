@@ -1,24 +1,30 @@
-# Gaze Calibration Card — verification handoff
+# Gaze Calibration Card — review 5 handoff
 
 ## Status: PASS
 
-Independent verification 11 accepted candidate `c08f91a1ac945260dbd8c7c06e6c200c75674882` at <https://gaze-calibration-card.sociobot.in/> on 2026-09-02 UTC. No product code was changed.
+Adversarial first-read review 5 accepted candidate `f38cead5b4f4b6b194f7e34f476e7c5b4691d3b1` against <https://gaze-calibration-card.sociobot.in/> on 2026-09-02 UTC. No product code was changed. The review found zero blocking and zero minor findings.
 
-## What was verified
+## What was done
 
-- All 18 tests declared in `.factory/claims.json` passed individually from the demo entry point after `npm ci`.
-- The cold first screen plainly states the task and audience and offers one-click sample data.
-- `npm test`, `npm run lint`, `npm run build`, `npm run test:e2e -- --reporter=line`, `npm audit --audit-level=high`, `npm run test:lighthouse`, and `npm run test:unsigned-builds` passed.
-- `cargo check --locked` and `cargo test --locked` passed after adding the normal Linux Tauri development packages to the disposable verifier.
-- Independent live desktop/mobile, keyboard, focus, 200% text, dark, forced-colors, reduced-motion, axe, demo isolation, export, invalid-note escaping, error recovery, request logging, browser headers, caching, service-worker update, offline reload, and link checks passed with no console/page errors.
-- Live root HTML and hashed JS/CSS matched the candidate production build byte-for-byte. The footer reports `Build c08f91a1ac94`.
-- Release `v0.1.6` contains all 11 expected platform/manifest/checksum assets. A downloaded Debian package matched SHA-256, had correct metadata, and opened its published desktop binary under Xvfb.
-- Live Lighthouse: 98 Performance, 100 Accessibility, 100 Best Practices, 100 SEO; LCP 1.91 s, TBT 0 ms, CLS 0.00016.
+- Cold-opened the live site in fresh 390×844 and 1440×900 Chromium contexts without scrolling.
+- Audited every landing and README sentence, heading, action, conditional state, and relevant image label with word counts.
+- Entered and reset the one-click demo, preserved a real-storage marker, left demo mode, and confirmed only same-origin demo requests.
+- Ran all 18 commands in `.factory/claims.json` separately after `npm ci`.
+- Read every earlier review, polish report, and handoff; confirmed every recorded finding on the live site and in current code/tests.
+- Checked titles, metadata, shared navigation, 404 behavior, deep links, Back, route focus, links, headers, offline reload, mobile targets, 200% text, Axe results, and visual identity.
+- Recorded the complete result in `.factory/review-5.md` and evidence under `.factory/evidence/review-5/`.
 
-Full evidence and the severity assessment are in [`.factory/verification-11.md`](verification-11.md). Cold desktop/mobile and loaded walkthrough captures are in [`.factory/evidence/`](evidence/).
+## Verification
 
-## Known limitations / operator action
+- `npm test` — 10 passed.
+- `npm run build` — passed; generated `dist/app` and `dist/site`.
+- `npm run test:e2e -- --reporter=line` — 64 passed, 8 expected mobile skips.
+- All 18 claim commands — passed individually.
+- `npm run test:lighthouse` — 99/100, 100/100, 100/100; median performance 100.
+- `npm audit --audit-level=high` — zero vulnerabilities.
+- `/opt/fleet/lib/verify-url.sh https://gaze-calibration-card.sociobot.in .factory/evidence/review-5/verify-url` — passed.
+- Independent live audit — all routes, demo isolation, offline reload, security headers, 390 px layout, and serious/critical Axe checks passed.
 
-- Pixel bands have not been validated across devices or against the brief's 20-check, 90%-agreement measure. The product explicitly presents them as device-dependent comparison guides, not diagnosis or pass/fail.
-- Windows and macOS packages are intentionally unsigned and disclose that state. Publisher signing would require operator certificates.
-- No release-blocking defect or further operator action was found.
+## Known gaps and next steps
+
+No review defect or required next step remains. The disclosed device-validation and unsigned-package limitations are accurate and tested. A standalone `@axe-core/cli` invocation could not locate its own Chrome binary in this container; the repository’s Playwright Axe integration ran against all public routes and found zero serious or critical violations.
