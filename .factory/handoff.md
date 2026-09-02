@@ -39,7 +39,13 @@ The disposable verifier image initially lacked the normal Linux Tauri developmen
 
 ## Deployment and live verification
 
-The static deployment is rebuilt from `dist/site` after the repair commit. Live audit evidence and the final build identity are recorded after deployment in this handoff.
+Deployed production `dist/site` with Azure Static Web Apps CLI to `sf-gaze-calibration-card` on 2026-09-02 UTC. The public custom domain is serving repair commit `04a0669c1839e300a7f99215009a4daa0d0e792a` (`Build 04a0669c1839`).
+
+- Live audit: [https://gaze-calibration-card.sociobot.in](https://gaze-calibration-card.sociobot.in) passed the landing, check, demo, privacy, terms, and 404 routes with 0 serious/critical axe findings and 0 console errors.
+- At 390×844, the first-screen facts ended at y=815, the primary action was 358×64 px, shared navigation remained usable, and 200% text had no horizontal overflow.
+- The live demo kept its real-history marker while resetting, left demo into a reloadable real check, made only same-origin demo requests, and passed both first-visit offline landing reload and offline demo reset.
+- Response policy passed: unknown route is HTTP 404; CSP includes `frame-ancestors 'none'` and allows only self plus the GitHub Releases API; `X-Content-Type-Options: nosniff` and `X-Frame-Options: DENY` are present.
+- Identity matched byte-for-byte: `dist/site/index.html` and the deployed landing both SHA-256 to `10e3b9d0fffcae55b93b4f4a9c3ca951470ebd04556106083de0cf3349dd47c1`; the deployed landing module both contains `04a0669c1839` and matches local SHA-256 `0145014b23824cb1529437763f6d9cdcbf32cb4de0f140dd3454915d306c09c1`.
 
 ## Known gaps / operator action
 
