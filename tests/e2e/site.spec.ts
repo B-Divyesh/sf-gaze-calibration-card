@@ -72,6 +72,28 @@ test("every public route has one clear page structure and no serious accessibili
   }
 });
 
+test("every route keeps the shared home header and navigation at desktop and phone widths", async ({ page }) => {
+  const routes = ["/", "/check/", "/demo/", "/privacy/", "/terms/", "/404.html"];
+  const navigation = [
+    ["Demo", "/demo/"],
+    ["How it works", "/#how"],
+    ["Privacy", "/privacy/"],
+    ["Source on GitHub (external)", "https://github.com/B-Divyesh/sf-gaze-calibration-card"]
+  ] as const;
+  for (const route of routes) {
+    await page.goto(`http://127.0.0.1:4173${route}`);
+    const header = page.locator("header").first();
+    await expect(header.getByRole("link", { name: "Gaze Calibration Card home" })).toHaveAttribute("href", "/");
+    await expect(header.getByRole("link")).toHaveCount(5);
+    for (const [name, href] of navigation) {
+      const link = header.getByRole("link", { name, exact: true });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute("href", href);
+      expect((await link.boundingBox())?.height, `${route}: ${name}`).toBeGreaterThanOrEqual(44);
+    }
+  }
+});
+
 test("demo and policy pages have route-specific metadata", async ({ page }) => {
   await page.goto("http://127.0.0.1:4173/demo/");
   await expect(page).toHaveTitle("Demo — Gaze Calibration Card");

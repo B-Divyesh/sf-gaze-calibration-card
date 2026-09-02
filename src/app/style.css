@@ -42,7 +42,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .brand span { display: flex; flex-direction: column; line-height: 1.2; }
 .brand b { font-family: Georgia, serif; font-size: 18px; }
 .brand small { margin-top: 3px; color: var(--muted); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
-.header-actions { display: flex; align-items: center; gap: 16px; }
+.global-nav { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+.global-nav a { display: inline-flex; min-height: 44px; align-items: center; padding: 8px 4px; color: var(--muted); font-size: 13px; text-decoration: none; }
+.global-nav a:hover { color: var(--fern); text-decoration: underline; text-underline-offset: 3px; }
+.header-actions { display: flex; align-items: center; gap: 16px; margin-left: 10px; }
 .network-note { color: var(--muted); font-size: 13px; }
 .network-note::before { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--good); content: ""; }
 .network-note.is-offline::before { background: var(--pollen); }
@@ -181,9 +184,11 @@ dialog form > div { display: flex; gap: 12px; margin-top: 24px; }
   .demo-banner { align-items: stretch; gap: 6px; flex-direction: column; padding: 10px 16px; }
   .demo-banner button { min-height: 44px; }
   .app-header, .app-footer, main { width: min(100% - 32px, 1180px); }
-  .app-header { min-height: 76px; gap: 8px; flex-wrap: wrap; }
+  .app-header { min-height: 0; gap: 4px 8px; flex-wrap: wrap; padding: 8px 0; }
   .header-actions { min-width: 0; margin-left: auto; }
   .header-actions .text-button { max-width: 12ch; text-align: right; white-space: normal; }
+  .global-nav { width: 100%; order: 3; justify-content: space-between; gap: 2px; margin-left: 0; }
+  .global-nav a { min-width: 0; padding: 7px 3px; font-size: 12px; line-height: 1.2; text-align: center; }
   .brand small, .network-note { display: none; }
   .intro-grid { grid-template-columns: 1fr; gap: 28px; min-height: auto; padding: 40px 0 56px; }
   h1 { font-size: clamp(2.45rem, 12vw, 4rem); }

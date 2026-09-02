@@ -45,6 +45,10 @@ let lastResult: SavedCheck | null = null;
 let isDemo = location.pathname.startsWith("/demo") || new URLSearchParams(location.search).get("demo") === "1";
 type AppRoute = "setup" | "ready" | "check" | "result" | "history" | "stopped";
 
+function globalNavigation() {
+  return `<nav class="global-nav" aria-label="Main navigation"><a href="/demo/">Demo</a><a href="/#how">How it works</a><a href="/privacy/">Privacy</a><a href="https://github.com/B-Divyesh/sf-gaze-calibration-card" rel="noreferrer">Source on GitHub (external)</a></nav>`;
+}
+
 function routeFor(route: AppRoute) { return `#${route}`; }
 function currentRoute(): AppRoute {
   const value = location.hash.slice(1);
@@ -94,10 +98,11 @@ function shell(content: string, step = "setup") {
   app.innerHTML = `
     ${isDemo ? `<aside class="demo-banner" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved</strong><span>Explore a completed check without changing your history.</span><button id="reset-demo" type="button">Reset demo</button><button id="leave-demo" type="button">Start a new check</button></aside>` : ""}
     <header class="app-header">
-      <a class="brand" href="#setup" aria-label="Gaze Calibration Card home">
+      <a class="brand" href="/" aria-label="Gaze Calibration Card home">
         <svg aria-hidden="true" viewBox="0 0 40 40"><path d="M20 34C19 21 25 12 34 6M19 26c-6 0-10-4-11-9 6-1 11 2 12 7M23 19c0-6 4-10 9-11 1 6-2 11-8 12"/></svg>
         <span><b>Gaze Calibration Card</b><small>Local pointer comparison</small></span>
       </a>
+      ${globalNavigation()}
       <div class="header-actions">
         <span id="network-status" class="network-note" role="status"></span>
         <button class="text-button" id="history-button" type="button">View past checks</button>

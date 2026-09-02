@@ -64,7 +64,7 @@ The Ubuntu release job supplies the GTK helper compatibility link. It runs AppIm
 
 After installing Tauri prerequisites, run `APPIMAGE_EXTRACT_AND_RUN=1 CI=true npm run tauri build -- --bundles appimage` to reproduce the Linux AppImage check.
 
-Deploy `dist/site` as the static artifact.
+Deploy the website files in `dist/site`.
 
 ## Privacy and license
 

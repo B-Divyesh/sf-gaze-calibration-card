@@ -10,6 +10,12 @@ await mkdir(output, { recursive: true });
 
 const browser = await chromium.launch({ headless: true });
 const evidence = { base, checkedAt: new Date().toISOString(), routes: [], demo: {}, mobile: {}, offline: {}, headers: {} };
+const sharedNavigation = [
+  ["Demo", "/demo/"],
+  ["How it works", "/#how"],
+  ["Privacy", "/privacy/"],
+  ["Source on GitHub (external)", "https://github.com/B-Divyesh/sf-gaze-calibration-card"]
+];
 
 try {
   const context = await browser.newContext();
@@ -33,6 +39,13 @@ try {
     assert.equal(await page.locator("h1").count(), 1, path);
     assert.equal(await page.locator("main").count(), 1, path);
     assert.equal(await page.locator("img:not([alt])").count(), 0, path);
+    const header = page.locator("header").first();
+    assert.equal(await header.getByRole("link", { name: "Gaze Calibration Card home" }).getAttribute("href"), "/", path);
+    for (const [name, href] of sharedNavigation) {
+      const link = header.getByRole("link", { name, exact: true });
+      assert.equal(await link.count(), 1, `${path} ${name}`);
+      assert.equal(await link.getAttribute("href"), href, `${path} ${name}`);
+    }
     const axe = await new AxeBuilder({ page }).analyze();
     const serious = axe.violations.filter((item) => item.impact === "serious" || item.impact === "critical");
     assert.deepEqual(serious, [], path);
@@ -74,6 +87,12 @@ try {
   const primary = await mobile.getByRole("link", { name: /Try it with sample data/ }).first().boundingBox();
   assert(primary && primary.width >= 44 && primary.height >= 44);
   assert(factsBottom <= 844);
+  const mobileHeader = mobile.locator("header").first();
+  for (const [name] of sharedNavigation) {
+    const link = mobileHeader.getByRole("link", { name, exact: true });
+    assert.equal(await link.isVisible(), true, `mobile ${name}`);
+    assert((await link.boundingBox())?.height >= 44, `mobile ${name}`);
+  }
   await mobile.evaluate(async () => {
     for (let y = 0; y < document.documentElement.scrollHeight; y += 600) {
       window.scrollTo(0, y);
@@ -90,7 +109,7 @@ try {
   await mobile.screenshot({ path: join(output, "live-demo-390.png"), fullPage: true });
   await mobile.getByRole("button", { name: "Start a new check" }).click();
   await mobile.screenshot({ path: join(output, "live-check-390.png"), fullPage: true });
-  evidence.mobile = { viewport: "390x844", factsBottom: Math.round(factsBottom), primaryWidth: Math.round(primary.width), primaryHeight: Math.round(primary.height), horizontalOverflowAt200Percent: false };
+  evidence.mobile = { viewport: "390x844", factsBottom: Math.round(factsBottom), primaryWidth: Math.round(primary.width), primaryHeight: Math.round(primary.height), sharedNavigation: true, horizontalOverflowAt200Percent: false };
   await mobile.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
   const widths = await mobile.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   assert.equal(widths.scroll, widths.client);

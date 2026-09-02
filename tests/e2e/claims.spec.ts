@@ -220,21 +220,44 @@ test("@claim:history-limit keeps no more than 50 local checks", async ({ page })
   expect(await page.evaluate(() => localStorage.getItem("gaze-calibration-card:checks:v1"))).toBeNull();
 });
 
-test("@claim:release-download uses GitHub release metadata, permits only GitHub, and caches it for one hour", async ({ browser }) => {
-  // This is a release-metadata unit of behavior, not a service-worker test.
-  // Blocking workers here keeps its temporary platform contexts independent of
-  // the offline-reload claim and avoids unrelated worker teardown activity.
-  const windows = await browser.newContext({ serviceWorkers: "block" });
-  const mac = await browser.newContext({ serviceWorkers: "block" });
+test("@claim:release-download selects every published platform branch and caches GitHub metadata for one hour", async ({ browser }) => {
+  // This behavior owns fresh browser contexts: a platform choice must never
+  // inherit another context's user-agent hints or release cache.
+  const contexts: import("@playwright/test").BrowserContext[] = [];
+  const releaseRoute = "https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest";
+  const openPlatform = async (platform: string, architecture: string, unavailable = false) => {
+    const context = await browser.newContext({ serviceWorkers: "block" });
+    contexts.push(context);
+    await context.addInitScript(({ platformName, architectureName, fail }) => {
+      Object.defineProperty(navigator, "userAgentData", {
+        configurable: true,
+        value: {
+          platform: platformName,
+          getHighEntropyValues: async () => {
+            if (fail) throw new Error("Architecture unavailable");
+            return { architecture: architectureName };
+          }
+        }
+      });
+    }, { platformName: platform, architectureName: architecture, fail: unavailable });
+    await context.route(releaseRoute, (route) => route.fulfill({ json: releaseFixture }));
+    const page = await context.newPage();
+    await page.goto(`${siteUrl}/`);
+    return { context, page };
+  };
+
   try {
+    const windows = await browser.newContext({ serviceWorkers: "block" });
+    contexts.push(windows);
     const page = await windows.newPage();
     let apiCalls = 0;
     const requests: string[] = [];
     page.on("request", (request) => requests.push(request.url()));
     await page.addInitScript(() => Object.defineProperty(navigator, "userAgentData", { configurable: true, value: { platform: "Windows", getHighEntropyValues: async () => ({ architecture: "x86" }) } }));
-    await page.route("https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest", (route) => { apiCalls += 1; return route.fulfill({ json: releaseFixture }); });
+    await page.route(releaseRoute, (route) => { apiCalls += 1; return route.fulfill({ json: releaseFixture }); });
     await page.goto(`${siteUrl}/`);
     await expect(page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-x64\.exe$/);
+    await expect(page.locator("#platform-label")).toHaveText("Download for Windows");
     expect(requests.every((url) => [siteUrl, "https://api.github.com"].includes(new URL(url).origin))).toBe(true);
     await page.evaluate(() => {
       const key = "gaze-calibration-card:release:v1";
@@ -254,14 +277,26 @@ test("@claim:release-download uses GitHub release metadata, permits only GitHub,
     await page.reload();
     await expect(page.locator("#download-status")).toContainText("Version 0.1.1");
     expect(apiCalls).toBe(2);
-    await mac.addInitScript(() => Object.defineProperty(navigator, "userAgentData", { configurable: true, value: { platform: "macOS", getHighEntropyValues: async () => ({ architecture: "arm" }) } }));
-    await mac.route("https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest", (route) => route.fulfill({ json: releaseFixture }));
-    const macPage = await mac.newPage();
-    await macPage.goto(`${siteUrl}/`);
-    await expect(macPage.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-aarch64\.dmg$/);
-    await expect(macPage.locator("#platform-label")).toHaveText("Download for Mac (Apple silicon)");
+
+    const linux = await openPlatform("Linux", "x86");
+    await expect(linux.page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-amd64\.AppImage$/);
+    await expect(linux.page.locator("#platform-label")).toHaveText("Download for Linux");
+
+    const appleSilicon = await openPlatform("macOS", "arm");
+    await expect(appleSilicon.page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-aarch64\.dmg$/);
+    await expect(appleSilicon.page.locator("#platform-label")).toHaveText("Download for Mac (Apple silicon)");
+
+    const intelMac = await openPlatform("macOS", "x86");
+    await expect(intelMac.page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-x64\.dmg$/);
+    await expect(intelMac.page.locator("#platform-label")).toHaveText("Download for Mac (Intel)");
+
+    const unknownMac = await openPlatform("macOS", "", true);
+    await expect(unknownMac.page.locator("#platform-label")).toHaveText("Choose a Mac download");
+    await expect(unknownMac.page.getByText("Mac architecture could not be detected:")).toBeVisible();
+    await expect(unknownMac.page.getByRole("link", { name: "Apple silicon", exact: true })).toHaveAttribute("href", /app-aarch64\.dmg$/);
+    await expect(unknownMac.page.getByRole("link", { name: "Intel", exact: true })).toHaveAttribute("href", /app-x64\.dmg$/);
   } finally {
-    await Promise.all([windows.close(), mac.close()]);
+    await Promise.all(contexts.map((context) => context.close()));
   }
 });
 
