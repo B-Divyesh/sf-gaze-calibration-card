@@ -1,6 +1,6 @@
 # Gaze Calibration Card — repair handoff
 
-## Status: ready to deploy
+## Status: static deployment verified; desktop release pending
 
 Repair implementation: `e1faf5e6e9b4` (`fix: preserve fresh gaze measurements and real results`).
 
@@ -43,9 +43,20 @@ Run after a clean `npm ci` with Playwright `1.58.2` and its preinstalled Chromiu
 | `npm audit --audit-level=high` | PASS — 0 vulnerabilities |
 | `cargo check --locked --manifest-path src-tauri/Cargo.toml` | Environment blocked before compilation by missing `glib-2.0.pc`; no source failure observed |
 
-## Deployment and release
+## Live deployment evidence
 
-The static production deployment and the `v0.1.5` GitHub Actions desktop release are the remaining actions. Deploy `dist/site` to the scoped Static Web App `sf-gaze-calibration-card` in resource group `sociobot`, then verify the live build identity and response policy. Tag `v0.1.5` after the final repair commit so the release workflow builds the macOS, Windows, and Linux package matrix, `SHA256SUMS`, and `latest.json`.
+The rebuilt `dist/site` artifact was deployed to the scoped production Static Web App `sf-gaze-calibration-card` in resource group `sociobot` on 2026-09-02 UTC. The public custom domain served the repaired bundle and its footer identified the deployed build.
+
+- `/opt/fleet/lib/verify-url.sh` passed at `https://gaze-calibration-card.sociobot.in/`: HTTPS 200, 656 ms load, title/lang/one h1/main, no missing image alt text or unlabeled buttons, and no browser console errors.
+- `node tools/audit-live.mjs` passed for landing, check, demo, privacy, terms, and 404: all routes returned 200, had zero serious/critical axe findings and zero console errors. It also passed demo isolation, 390×844 layout and 200% reflow, offline landing/demo reload, the service-worker path, CSP, `nosniff`, `DENY`, and a real 404 response.
+- A fresh live `/check/#result` context displayed **No saved result found**, with no demo banner, sample verdict, or map points.
+- The exact live click-Start-then-no-movement run completed with nine readings, all empty, and `sampleCount: 0`; the recovery copy instructed the person to make sure their gaze system moves the pointer.
+
+Evidence files are in `.factory/evidence/repair-4/`.
+
+## Release
+
+The next action is to tag `v0.1.5` at the final repair commit and let GitHub Actions build the macOS, Windows, and Linux package matrix, `SHA256SUMS`, and `latest.json`.
 
 ## Known gap / operator action
 
