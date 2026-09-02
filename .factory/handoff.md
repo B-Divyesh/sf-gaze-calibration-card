@@ -1,48 +1,28 @@
-# Gaze Calibration Card — polish 4 handoff
+# Gaze Calibration Card — verification 10 handoff
 
-## Status: complete
+## Status: FAIL — release blocked
 
-Repair commit: `e1d670bab514117d0b04366535d896d28d907580` (`fix: close review four findings`). Static production deployment and the desktop [v0.1.6 release](https://github.com/B-Divyesh/sf-gaze-calibration-card/releases/tag/v0.1.6) are complete.
+Candidate `934bd97b906974ae82810cf0f8de8adf0c9de823` was independently verified against <https://gaze-calibration-card.sociobot.in/> on 2026-09-02 UTC. Do not accept this candidate until both required test commands are reliably green.
 
-The repair closes every finding in review 4 and the earlier reviews:
+The live deployment itself matches the candidate (`Build 934bd97b9069`) and the product works end to end: one-click isolated demo, nine-target pointer comparison, keyboard path, local-only storage, opt-in notes, history clearing, standalone export, offline reload, and desktop packages all passed. All 18 registered claim tests passed when each manifest command was run independently.
 
-- The download claim now proves Windows, Linux, Apple-silicon Mac, Intel Mac, unknown-Mac fallback, same-origin/GitHub requests, and the one-hour cache boundary.
-- Every route now has a home-linked wordmark and the same Demo, How it works, Privacy, and Source navigation. Mobile keeps all of it visible and touch-sized.
-- README says “website files,” not “static artifact.”
-- The copy audit is current, includes navigation and conditional states, and is checked against a fresh `dist/site` build.
-- The desktop release was bumped to 0.1.6 so the corrected app header is shipped in all published platform builds.
+## Release-blocking defects
 
-## How to run and verify
+1. `npm test` failed twice from the clean checkout. `tests/copy-audit.test.ts` invokes a production-site build but is limited by Vitest's 5-second default timeout. It timed out at 5.051 s and 5.038 s; with `--testTimeout=10000`, it passed in 8.912 s.
+2. `npm run test:e2e -- --reporter=line` exited 1 after 63 passing tests and 8 intentional skips because Chromium crashed before the mobile deployment-config test. The same test passes alone, but the full required suite is unstable.
 
-```sh
-npm ci
-npm run lint
-npm test
-npm run build
-npm run test:e2e -- --reporter=line
-npm run test:lighthouse
-npm run test:unsigned-builds
-cargo check --locked --manifest-path src-tauri/Cargo.toml
-cargo test --locked --manifest-path src-tauri/Cargo.toml
-```
+## Verification summary
 
-Every exact command in [.factory/claims.json](claims.json) was also run independently after `npm ci`; all 18 passed. The new `@claim:release-download` test passes Windows, Linux, Apple-silicon Mac, Intel Mac, and unavailable-architecture Mac contexts.
+- `npm ci`, lint, production build, cargo check/test, Lighthouse, release signature checks: pass.
+- Lighthouse mobile: 95/100, 99/100, 98/100 performance; 100 accessibility in every run.
+- Live audit: zero serious/critical axe findings and zero console/page errors across landing, check, demo, privacy, terms, and 404 routes; 390px layout and 200% text reflow pass.
+- Privacy/network: demo only made same-origin requests; the landing's documented GitHub Release API call is the sole external request. Camera, microphone, geolocation, payment, and USB are denied by policy.
+- Release: v0.1.6 contains all 11 expected artifacts. The Linux Debian package checksum matches `SHA256SUMS` and its extracted app stayed open for 12 seconds in Xvfb.
 
-## Verification evidence
+See [verification-10.md](verification-10.md) for commands, full evidence, and severity detail.
 
-- `npm test`: 9 tests passed, including the built-output copy-audit check.
-- `npm run build`: passed; `dist/app` and `dist/site` produced. Initial static JS is 8.65 KB gzip; CSS is 6.56 KB gzip.
-- `npm run test:e2e -- --reporter=line`: 64 passed, 8 expected project skips; Playwright recorded `status: passed`.
-- `npm run test:lighthouse`: mobile performance 99/100, 100/100, 100/100; median 100.
-- `cargo check --locked` and `cargo test --locked`: passed after installing the standard Linux Tauri GTK/WebKit development prerequisites in the disposable verifier.
-- `npm run test:unsigned-builds`: passed against v0.1.6. It verified SHA256 then inspected EXE, MSI, Apple-silicon app archive, and Intel app archive; none has a publisher signature.
-- Cold production audit: all `/`, `/check/`, `/demo/`, `/privacy/`, `/terms/`, and `/404.html` routes had their expected title, one h1, main landmark, alt coverage, no console errors, and zero serious/critical Axe violations. The designed missing route returned HTTP 404.
-- Cold 390×844 audit: facts finish at y=815; primary demo control is 358×64; all global navigation is visible; 200% text has no horizontal overflow.
-- Live demo audit: `?demo=1` enters `/demo/#result`; the banner, Reset demo, and Start a new check work; demo storage remains isolated; exit opens `/check/#setup`; landing and demo reload offline.
-- The final cold production recheck matched the pushed head; a fresh release lookup reported “Version 0.1.6 · a matching download is ready.”
+## Next steps
 
-The worker image did not include a `verify-url.sh`; `tools/audit-live.mjs` performs its title/lang/main/alt/console equivalent and uses Playwright Axe. Final evidence is [live-audit.json](evidence/polish-4/live/live-audit.json), [landing](evidence/polish-4/live/live-landing-390.png), [demo](evidence/polish-4/live/live-demo-390.png), and [real check](evidence/polish-4/live/live-check-390.png).
-
-## Known gaps
-
-None. The app intentionally ships unsigned Windows and macOS packages; that limitation is visibly disclosed and verified against the release. Optional future signing needs `APPLE_CERTIFICATE` and `WINDOWS_CERT_PFX` from the product owner, but signing is not required for this release.
+1. Fix the copy-audit test deadline and verify `npm test` on a clean checkout.
+2. Stabilize the full Playwright mobile run, then rerun `npm run test:e2e -- --reporter=line` until it exits 0.
+3. Re-run the 18 exact `.factory/claims.json` commands and the production live audit after the repair.
