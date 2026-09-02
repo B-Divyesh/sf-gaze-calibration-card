@@ -54,7 +54,14 @@ test("@claim:sample-demo opens realistic data in isolated storage", async ({ pag
   await page.getByRole("button", { name: "Reset demo" }).click();
   expect(await page.evaluate(() => localStorage.getItem("gaze-calibration-card:checks:v1"))).toBe("real-history-marker");
   await page.getByRole("button", { name: "Start a new check" }).click();
+  await expect(page).toHaveURL(/\/check\/#setup$/);
   await expect(page.getByText("Demo — sample data, nothing is saved")).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem("gaze-calibration-card:checks:v1"))).toBe("real-history-marker");
+  expect(await page.evaluate(() => localStorage.getItem("demo:gaze-calibration-card:checks:v1"))).toBeNull();
+  await page.goto(`${siteUrl}/?demo=1`);
+  await expect(page).toHaveURL(/\/demo\/#result$/);
+  await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("gaze-calibration-card:checks:v1"))).toBe("real-history-marker");
 });
 
 test("@claim:offline-reload reloads the complete site after one visit", async ({ browser }) => {
@@ -103,12 +110,31 @@ test("@claim:local-private completes a demo flow without camera, telemetry, or c
   page.on("request", (request) => requests.push(request.url()));
   await page.goto(`${siteUrl}/demo/`);
   await page.getByRole("button", { name: "Reset demo" }).click();
-  const download = page.waitForEvent("download");
+  const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export support report" }).click();
-  await download;
+  const download = await downloadPromise;
+  const report = await readFile(await download.path() as string, "utf8");
+  expect(report).toContain("Wheelchair upright; headrest raised");
   expect(requests.every((url) => new URL(url).origin === siteUrl)).toBe(true);
   expect(await page.evaluate(() => (window as typeof window & { cameraRequested?: boolean }).cameraRequested)).toBe(false);
-  await expect(page.getByRole("link", { name: /sign in|log in/i })).toHaveCount(0);
+});
+
+test("@claim:no-account completes the useful flows without authentication", async ({ page }) => {
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
+  await page.goto(`${siteUrl}/demo/`);
+  await page.getByRole("button", { name: "Reset demo" }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export support report" }).click();
+  await downloadPromise;
+  await expect(page.getByRole("link", { name: /sign in|log in|create account/i })).toHaveCount(0);
+  await expect(page.locator('input[type="email"], input[type="password"]')).toHaveCount(0);
+
+  await page.goto("/");
+  await completeKeyboardCheck(page);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("gaze-calibration-card:checks:v1") ?? "[]").length)).toBe(1);
+  expect(requests.some((url) => /\/auth\b|\/login\b|\/account\b/i.test(new URL(url).pathname))).toBe(false);
+  expect(await page.context().cookies()).toEqual([]);
 });
 
 test("@claim:nine-targets shows one reading for every target", async ({ page }) => {
@@ -239,7 +265,7 @@ test("@claim:release-download uses GitHub release metadata, permits only GitHub,
   }
 });
 
-test("@claim:installer-checksum stops the shell installer before use on a checksum mismatch", async () => {
+test("@claim:installer-checksum executes the shell installer and stops before use on a checksum mismatch", async () => {
   const shell = await readFile("public/install.sh", "utf8");
   expect(shell).toMatch(/sha256sum|shasum/);
   expect(shell).toContain("Checksum verification failed");
@@ -249,7 +275,7 @@ test("@claim:installer-checksum stops the shell installer before use on a checks
   await writeFile(join(directory, "uname"), "#!/bin/sh\n[ \"$1\" = -s ] && echo Linux || echo x86_64\n");
   await chmod(join(directory, "curl"), 0o755);
   await chmod(join(directory, "uname"), 0o755);
-  await expect(execFileAsync("sh", ["public/install.sh"], { env: { ...process.env, HOME: directory, FIXTURE_DIR: directory, PATH: `${directory}:${process.env.PATH}` } })).rejects.toThrow(/Checksum verification failed/);
+  await expect(execFileAsync("sh", ["public/install.sh"], { env: { ...process.env, XDG_BIN_HOME: directory, FIXTURE_DIR: directory, PATH: `${directory}:${process.env.PATH}` } })).rejects.toThrow(/Checksum verification failed/);
   await rm(directory, { recursive: true, force: true });
 });
 
@@ -274,10 +300,15 @@ test("@claim:not-a-diagnosis keeps comparison-only language in the app and expor
   expect(report).toContain("It is not a pass or fail.");
 });
 
-test("@claim:unsigned-builds tells visitors that macOS and Windows packages are unsigned", async ({ page }) => {
+test("@claim:unsigned-builds inspects every published Windows and macOS app package", async ({ page, isMobile }) => {
+  test.skip(isMobile, "Release artifacts are inspected once in the desktop project.");
   await page.goto(`${siteUrl}/`);
   await page.getByText("Install another way", { exact: true }).click();
-  await expect(page.getByText("macOS and Windows builds are unsigned. Your system may ask you to confirm the publisher.", { exact: true })).toBeVisible();
+  await expect(page.getByText("The Windows installers and macOS app bundles are unsigned.", { exact: true })).toBeVisible();
+  const { stdout } = await execFileAsync(process.execPath, ["tests/release-unsigned.test.mjs"]);
+  const evidence = JSON.parse(stdout.slice(stdout.indexOf("{")));
+  expect(evidence.artifacts).toHaveLength(4);
+  expect(evidence.artifacts.every((artifact: { publisherSignature: boolean }) => artifact.publisherSignature === false)).toBe(true);
 });
 
 test("@claim:free-open-source exposes the MIT license and no payment action", async ({ page }) => {

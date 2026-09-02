@@ -129,7 +129,7 @@ function resetDemo() {
 function leaveDemo() {
   localStorage.removeItem(DEMO_STORAGE_KEY);
   isDemo = false;
-  const nextPath = location.pathname.startsWith("/demo") ? "/" : location.pathname;
+  const nextPath = location.pathname.startsWith("/demo") ? "/check/" : location.pathname;
   history.replaceState({ route: "setup" }, "", `${nextPath}#setup`);
   navigate("setup", true);
 }
@@ -164,8 +164,8 @@ function renderSetup(shouldFocus = false) {
       <div class="intro-copy">
         <p class="eyebrow">Nine-target check · about 30 seconds</p>
         <h1 id="page-title">Compare your gaze-controlled pointer right now</h1>
-        <p class="lead">Visit nine targets. We’ll summarize pointer error, directional drift, and dwell before you begin a demanding interaction.</p>
-        <div class="privacy-strip"><b>No camera access.</b> This reads the system pointer your gaze system already controls. Nothing leaves this device.</div>
+        <p class="lead">Visit nine targets. We’ll summarize pointer error, drift, and dwell, which shows how steadily the pointer stays on each target.</p>
+        <div class="privacy-strip"><b>No camera access.</b> This reads the system pointer your gaze system already controls. No pointer samples or setup notes are sent.</div>
       </div>
       <figure class="hero-figure">
         <picture>
@@ -463,7 +463,7 @@ function confirmClearHistory() {
 
 function exportReport(result: SavedCheck) {
   const notes = result.setup.saveNotes ? [result.setup.posture, result.setup.glasses, result.setup.lighting, result.setup.notes].filter(Boolean).map(escapeHtml).join(" · ") : "Not saved by user";
-  const report = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Gaze check report ${escapeHtml(result.date)}</title><style>body{font:17px/1.55 system-ui;color:#17251e;max-width:760px;margin:48px auto;padding:0 24px}h1{font:700 38px Georgia,serif}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:12px;border-bottom:1px solid #aaa}.note{background:#f3f0e5;padding:16px}small{color:#59685f}</style><main><p>Gaze Calibration Card · support report</p><h1>Pointer comparison</h1><p>${escapeHtml(formatDate(result.date))}</p><table><tr><th>Input</th><td>${escapeHtml(result.setup.mode)}</td></tr><tr><th>Average target error</th><td>${Math.round(result.metrics.meanError)} px</td></tr><tr><th>Dwell</th><td>${Math.round(result.metrics.dwellReliability)}%</td></tr><tr><th>Directional pattern</th><td>${escapeHtml(describeDrift(result.metrics.horizontalDrift, result.metrics.verticalDrift))}</td></tr><tr><th>Pointer samples</th><td>${result.metrics.sampleCount}</td></tr><tr><th>Setup notes</th><td>${notes}</td></tr></table><p class="note"><b>Interpretation:</b> Pixel bands are device-dependent and have not been validated across eye trackers or screens. The bands are ≤80 px mean error and ≥75% dwell, or a mixed band of ≤125 px and ≥55%. This comparison does not diagnose a condition or replace your device maker’s calibration. It is not a pass or fail.</p><small>Generated locally by Gaze Calibration Card. No camera frames or data were uploaded.</small></main></html>`;
+  const report = `<!doctype html><html lang="en"><meta charset="utf-8"><title>Gaze check report ${escapeHtml(result.date)}</title><style>body{font:17px/1.55 system-ui;color:#17251e;max-width:760px;margin:48px auto;padding:0 24px}h1{font:700 38px Georgia,serif}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:12px;border-bottom:1px solid #aaa}.note{background:#f3f0e5;padding:16px}small{color:#59685f}</style><main><p>Gaze Calibration Card · support report</p><h1>Pointer comparison</h1><p>${escapeHtml(formatDate(result.date))}</p><p>Dwell shows how steadily the pointer stayed on each target.</p><table><tr><th>Input</th><td>${escapeHtml(result.setup.mode)}</td></tr><tr><th>Average target error</th><td>${Math.round(result.metrics.meanError)} px</td></tr><tr><th>Dwell</th><td>${Math.round(result.metrics.dwellReliability)}%</td></tr><tr><th>Directional pattern</th><td>${escapeHtml(describeDrift(result.metrics.horizontalDrift, result.metrics.verticalDrift))}</td></tr><tr><th>Pointer samples</th><td>${result.metrics.sampleCount}</td></tr><tr><th>Setup notes</th><td>${notes}</td></tr></table><p class="note"><b>Interpretation:</b> Pixel bands are device-dependent and have not been validated across eye trackers or screens. The bands are ≤80 px mean error and ≥75% dwell, or a mixed band of ≤125 px and ≥55%. This comparison does not diagnose a condition or replace your device maker’s calibration. It is not a pass or fail.</p><small>Generated locally by Gaze Calibration Card. No pointer samples or setup notes were uploaded.</small></main></html>`;
   const url = URL.createObjectURL(new Blob([report], { type: "text/html" }));
   const link = document.createElement("a");
   link.href = url;

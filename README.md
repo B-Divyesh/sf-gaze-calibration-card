@@ -2,13 +2,13 @@
 
 Compare a gaze-controlled pointer across nine targets before a demanding task. It is for people who rely on eye input.
 
-The report shows target error, directional drift, and dwell. Pixel bands are device-dependent and have not been validated across eye trackers or screens. This comparison does not diagnose a condition or replace your device maker’s calibration.
+The report shows target error, directional drift, and dwell. Dwell shows how steadily the pointer stays on each target. Pixel bands are device-dependent and have not been validated across eye trackers or screens. This comparison does not diagnose a condition or replace your device maker’s calibration.
 
 ## Try the sample
 
 Open <https://gaze-calibration-card.sociobot.in/demo/> for a completed sample check. The demo uses `demo:gaze-calibration-card:checks:v1`, separate from real history. **Reset demo** restores the bundled sample. **Start a new check** discards demo data.
 
-See [.factory/demo.md](.factory/demo.md) for the sample and isolation details. Every public product claim and its browser test is listed in [.factory/claims.json](.factory/claims.json).
+See [.factory/demo.md](.factory/demo.md) for the sample and isolation details. Claim checks are listed in [.factory/claims.json](.factory/claims.json).
 
 ## How it works
 
@@ -20,7 +20,7 @@ The app records ordinary system pointer coordinates during each target.
 - Local history keeps at most 50 checks and can be cleared.
 - A completed result exports as a standalone HTML support report.
 
-The browser sample requests no camera access and sends no pointer data or telemetry. The download page contacts the GitHub release service only to find current packages and stores that result for one hour.
+The browser sample requests no camera access and sends no pointer data or telemetry. The download page reads GitHub release metadata to select current packages. It caches that metadata for one hour.
 
 ## Develop and verify
 
@@ -52,7 +52,9 @@ curl -fsSL https://gaze-calibration-card.sociobot.in/install.sh | sh
 irm https://gaze-calibration-card.sociobot.in/install.ps1 | iex
 ```
 
-Both installers verify SHA256 before installing or opening the download. macOS and Windows builds are unsigned. Your system may ask you to confirm the publisher.
+The shell installer verifies SHA256 before installing or opening the download. The Windows installers and macOS app bundles are unsigned.
+
+For macOS installation steps, see [Apple’s guidance for opening an unnotarized app (external)](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac).
 
 ## Release and deploy
 

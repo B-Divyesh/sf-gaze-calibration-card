@@ -1,5 +1,5 @@
 const CACHE = "gaze-card-site-v2";
-const ROUTES = ["/", "/demo/", "/privacy/", "/terms/", "/404.html"];
+const ROUTES = ["/", "/check/", "/demo/", "/privacy/", "/terms/", "/404.html"];
 
 async function precacheShell() {
   const cache = await caches.open(CACHE);

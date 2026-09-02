@@ -3,6 +3,7 @@
     { "route": "/assets/*", "headers": { "Cache-Control": "public, max-age=31536000, immutable" } },
     { "route": "/sw.js", "headers": { "Cache-Control": "no-cache, no-store, must-revalidate" } },
     { "route": "/", "headers": { "Cache-Control": "no-cache" } },
+    { "route": "/check/*", "headers": { "Cache-Control": "no-cache" } },
     { "route": "/demo/*", "headers": { "Cache-Control": "no-cache" } }
   ],
   "responseOverrides": {

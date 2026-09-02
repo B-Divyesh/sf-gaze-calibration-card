@@ -30,7 +30,7 @@ if [ "$OS" = "Darwin" ]; then
   cp "$ASSET" "$DESTINATION"
   open "$DESTINATION"
   echo "Verified the SHA256 checksum and opened $DESTINATION. Drag Gaze Calibration Card to Applications."
-  echo "This build is unsigned; if macOS blocks it, right-click the app and choose Open."
+  echo "This macOS app bundle is unsigned."
 else
   INSTALL_DIR="${XDG_BIN_HOME:-$HOME/.local/bin}"
   mkdir -p "$INSTALL_DIR"
