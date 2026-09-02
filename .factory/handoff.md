@@ -39,7 +39,7 @@ Every exact command in [.factory/claims.json](claims.json) was also run independ
 - Cold production audit: all `/`, `/check/`, `/demo/`, `/privacy/`, `/terms/`, and `/404.html` routes had their expected title, one h1, main landmark, alt coverage, no console errors, and zero serious/critical Axe violations. The designed missing route returned HTTP 404.
 - Cold 390×844 audit: facts finish at y=815; primary demo control is 358×64; all global navigation is visible; 200% text has no horizontal overflow.
 - Live demo audit: `?demo=1` enters `/demo/#result`; the banner, Reset demo, and Start a new check work; demo storage remains isolated; exit opens `/check/#setup`; landing and demo reload offline.
-- Live footer reports build `e1d670bab514`; a fresh release lookup reports “Version 0.1.6 · a matching download is ready.”
+- The final cold production recheck matched the pushed head; a fresh release lookup reported “Version 0.1.6 · a matching download is ready.”
 
 The worker image did not include a `verify-url.sh`; `tools/audit-live.mjs` performs its title/lang/main/alt/console equivalent and uses Playwright Axe. Final evidence is [live-audit.json](evidence/polish-4/live/live-audit.json), [landing](evidence/polish-4/live/live-landing-390.png), [demo](evidence/polish-4/live/live-demo-390.png), and [real check](evidence/polish-4/live/live-check-390.png).
 
