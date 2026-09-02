@@ -1,6 +1,6 @@
 # Gaze Calibration Card — repair handoff
 
-## Status: static deployment verified; desktop release pending
+## Status: complete
 
 Repair implementation: `e1faf5e6e9b4` (`fix: preserve fresh gaze measurements and real results`).
 
@@ -45,7 +45,7 @@ Run after a clean `npm ci` with Playwright `1.58.2` and its preinstalled Chromiu
 
 ## Live deployment evidence
 
-The rebuilt `dist/site` artifact was deployed to the scoped production Static Web App `sf-gaze-calibration-card` in resource group `sociobot` on 2026-09-02 UTC. The public custom domain served the repaired bundle and its footer identified the deployed build.
+The rebuilt `dist/site` artifact was deployed to the scoped production Static Web App `sf-gaze-calibration-card` in resource group `sociobot` on 2026-09-02 UTC. The public custom domain serves repair build `db861d956fa4`.
 
 - `/opt/fleet/lib/verify-url.sh` passed at `https://gaze-calibration-card.sociobot.in/`: HTTPS 200, 656 ms load, title/lang/one h1/main, no missing image alt text or unlabeled buttons, and no browser console errors.
 - `node tools/audit-live.mjs` passed for landing, check, demo, privacy, terms, and 404: all routes returned 200, had zero serious/critical axe findings and zero console errors. It also passed demo isolation, 390×844 layout and 200% reflow, offline landing/demo reload, the service-worker path, CSP, `nosniff`, `DENY`, and a real 404 response.
@@ -56,7 +56,11 @@ Evidence files are in `.factory/evidence/repair-4/`.
 
 ## Release
 
-The next action is to tag `v0.1.5` at the final repair commit and let GitHub Actions build the macOS, Windows, and Linux package matrix, `SHA256SUMS`, and `latest.json`.
+GitHub Release [`v0.1.5`](https://github.com/B-Divyesh/sf-gaze-calibration-card/releases/tag/v0.1.5) was published from `db861d956fa4713310f549990e371d942fcd2bb2`. The [four-platform release workflow](https://github.com/B-Divyesh/sf-gaze-calibration-card/actions/runs/33584157683) completed successfully.
+
+- Assets: Windows EXE/MSI, Apple-silicon and Intel Mac DMG/app archives, Linux AppImage/DEB/RPM, `SHA256SUMS`, and `latest.json` (11 assets total).
+- `npm run test:unsigned-builds` passed against `v0.1.5`: every inspected Windows and Mac artifact matched its checksum and had the disclosed unsigned/ad-hoc signing state.
+- `latest.json` has the five expected platform keys and every manifest digest is covered by `SHA256SUMS`.
 
 ## Known gap / operator action
 
