@@ -51,6 +51,51 @@ test("pointer check produces and exports a measured result", async ({ page, isMo
   expect(download.suggestedFilename()).toMatch(/^gaze-check-.*\.html$/);
 });
 
+test("a stopped gaze pointer is not reused as nine fresh target samples", async ({ page, isMobile }) => {
+  test.skip(isMobile, "The documented stopped-pointer path is reproduced on the desktop gaze-pointer flow.");
+  test.setTimeout(40_000);
+  await page.goto("/");
+  // These Playwright clicks establish the exact old failure: the mouse moves
+  // to Start, then remains there while all nine automatic targets advance.
+  await page.getByRole("button", { name: "Prepare the check" }).click();
+  await page.getByRole("button", { name: "Start nine-target check" }).click();
+  await expect(page.getByRole("heading", { name: "Pattern outside comparison guide" })).toBeVisible({ timeout: 32_000 });
+  await expect(page.getByText("No recent pointer movement was detected. Make sure your gaze system moves the pointer.")).toBeVisible();
+  const result = await page.evaluate(() => JSON.parse(localStorage.getItem("gaze-calibration-card:checks:v1") ?? "[]")[0]);
+  expect(result.metrics.sampleCount).toBe(0);
+  expect(result.readings).toHaveLength(9);
+  expect(result.readings.every((reading: { samples: unknown[] }) => reading.samples.length === 0)).toBe(true);
+});
+
+test("a completed real result rehydrates after a cold reload", async ({ page }) => {
+  await page.goto("/check/");
+  await page.getByText("Keyboard practice", { exact: true }).click();
+  await page.getByRole("button", { name: "Prepare the check" }).click();
+  await page.getByRole("button", { name: "Start nine-target check" }).click();
+  for (let index = 1; index <= 9; index += 1) {
+    await page.getByRole("button", { name: `Target ${index} of 9` }).press("Space");
+  }
+  const beforeReload = await page.evaluate(() => JSON.parse(localStorage.getItem("gaze-calibration-card:current-result:v1") ?? "null"));
+  expect(beforeReload?.metrics.verdict).toBe("practice");
+  await page.reload();
+  await expect(page).toHaveURL(/\/check\/#result$/);
+  await expect(page.getByRole("heading", { name: "Keyboard path complete" })).toBeVisible();
+  await expect(page.getByText("Demo — sample data, nothing is saved")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Pattern within comparison guide" })).toHaveCount(0);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("gaze-calibration-card:current-result:v1") ?? "null")?.id)).toBe(beforeReload.id);
+});
+
+test("a real result route without local data shows recovery instead of demo metrics", async ({ page }) => {
+  await page.goto("/check/#result");
+  await expect(page.getByRole("heading", { name: "No saved result found" })).toBeVisible();
+  await expect(page.getByText("This result link has no local check on this device. It may have been cleared or created in another browser.")).toBeVisible();
+  await expect(page.getByText("Demo — sample data, nothing is saved")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Pattern within comparison guide" })).toHaveCount(0);
+  await expect(page.locator(".map-point")).toHaveCount(0);
+  await page.getByRole("button", { name: "Start a new check" }).click();
+  await expect(page).toHaveURL(/\/check\/#setup$/);
+});
+
 test("app routes load directly and browser back restores the prior screen", async ({ page }) => {
   await page.goto("/#history");
   await expect(page.getByRole("heading", { name: "Past checks" })).toBeVisible();

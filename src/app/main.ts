@@ -22,7 +22,9 @@ interface SavedCheck {
 }
 
 const STORAGE_KEY = "gaze-calibration-card:checks:v1";
+const CURRENT_RESULT_STORAGE_KEY = "gaze-calibration-card:current-result:v1";
 const DEMO_STORAGE_KEY = "demo:gaze-calibration-card:checks:v1";
+const POINTER_RECENCY_MS = 600;
 const mount = document.querySelector<HTMLDivElement>("#app");
 if (!mount) throw new Error("App mount not found");
 const app: HTMLDivElement = mount;
@@ -32,6 +34,8 @@ let setup: Setup = {
 };
 let readings: TargetReading[] = [];
 let pointer: PointSample | null = null;
+let pointerRevision = 0;
+let pointerRevisionAtTargetStart = 0;
 let targetIndex = 0;
 let sampleTimer = 0;
 let advanceTimer = 0;
@@ -80,6 +84,7 @@ const sampleResult: SavedCheck = {
 
 document.addEventListener("pointermove", (event) => {
   pointer = { x: event.clientX, y: event.clientY, time: performance.now() };
+  pointerRevision += 1;
 }, { passive: true });
 
 window.addEventListener("online", updateNetworkStatus);
@@ -145,7 +150,14 @@ function renderRoute(route = currentRoute(), focus = false) {
   if (route === "history") return renderHistory();
   if (route === "ready") return renderReady();
   if (route === "check") return startCheck();
-  if (route === "result") return renderResult(lastResult ?? sampleResult);
+  if (route === "result") {
+    if (isDemo) return renderResult(lastResult ?? sampleResult);
+    const result = lastResult ?? readCurrentResult();
+    if (!result) return renderMissingResult();
+    lastResult = result;
+    readings = result.readings;
+    return renderResult(result);
+  }
   if (route === "stopped") return renderStopped();
   return renderSetup(focus);
 }
@@ -291,15 +303,29 @@ function renderCheck() {
 
 function beginSampling(target: HTMLButtonElement) {
   targetStarted = performance.now();
+  // A pointer event from Start belongs to the setup screen. Every target must
+  // receive movement after it appears; otherwise a stopped gaze system would
+  // be relabelled as nine new readings.
+  pointerRevisionAtTargetStart = pointerRevision;
   const samples: PointSample[] = [];
   const rect = target.getBoundingClientRect();
   readings.push({ targetX: rect.left + rect.width / 2, targetY: rect.top + rect.height / 2, samples });
   if (setup.mode === "keyboard") return;
   sampleTimer = window.setInterval(() => {
     const elapsed = performance.now() - targetStarted;
-    if (elapsed >= 1600 && pointer && performance.now() - pointer.time < 600) samples.push({ ...pointer, time: elapsed });
+    const freshPointer = freshPointerForTarget();
+    if (elapsed >= 1600 && freshPointer) samples.push({ ...freshPointer, time: elapsed });
   }, 50);
   advanceTimer = window.setTimeout(() => completeCurrentTarget(target), 2800);
+}
+
+function freshPointerForTarget(): PointSample | null {
+  if (
+    pointer
+    && pointerRevision > pointerRevisionAtTargetStart
+    && performance.now() - pointer.time < POINTER_RECENCY_MS
+  ) return pointer;
+  return null;
 }
 
 function completeKeyboardTarget(target: HTMLButtonElement) {
@@ -317,7 +343,8 @@ function completeCurrentTarget(target: HTMLButtonElement, clickX?: number, click
   targetCompleted = true;
   const reading = readings[readings.length - 1];
   if (clickX !== undefined && clickY !== undefined) reading.samples.push({ x: clickX, y: clickY, time: performance.now() - targetStarted });
-  if (!reading.samples.length && pointer) reading.samples.push({ ...pointer, time: performance.now() - targetStarted });
+  const freshPointer = freshPointerForTarget();
+  if (!reading.samples.length && freshPointer) reading.samples.push({ ...freshPointer, time: performance.now() - targetStarted });
   target.classList.add("is-complete");
   window.setTimeout(advanceTarget, 180);
 }
@@ -353,8 +380,18 @@ function finishCheck() {
   const metrics = calculateMetrics(readings, setup.mode);
   const savedSetup = setup.saveNotes ? setup : { ...setup, posture: "", glasses: "", lighting: "", notes: "" };
   lastResult = { id: crypto.randomUUID(), date: new Date().toISOString(), setup: savedSetup, metrics, readings };
+  if (!isDemo) saveCurrentResult(lastResult);
   if (setup.keepHistory) saveCheck(lastResult);
   navigate("result");
+}
+
+function renderMissingResult() {
+  clearTimers();
+  document.title = "Result unavailable — Gaze Calibration Card";
+  shell(`<section class="message-sheet" aria-labelledby="page-title"><p class="eyebrow">Result unavailable</p><h1 id="page-title">No saved result found</h1><p>This result link has no local check on this device. It may have been cleared or created in another browser.</p><div class="ready-actions"><button class="primary-button" id="missing-start" type="button">Start a new check</button><button class="secondary-button" id="missing-history" type="button">View past checks</button></div></section>`, "result");
+  document.querySelector("#missing-start")?.addEventListener("click", () => navigate("setup"));
+  document.querySelector("#missing-history")?.addEventListener("click", () => navigate("history"));
+  announceAndFocus("No saved result found");
 }
 
 function renderResult(result: SavedCheck) {
@@ -380,7 +417,7 @@ function renderResult(result: SavedCheck) {
       <p class="validation-note"><b>Use this as a comparison, not a pass or fail.</b> Pixel bands are device-dependent and have not been validated across eye trackers or screens. This comparison does not diagnose a condition or replace your device maker’s calibration.</p>
       <div class="result-detail">
         <div class="result-map" role="img" aria-label="Nine-target map. ${Math.round(metrics.meanError)} pixel average error and ${Math.round(metrics.dwellReliability)} percent dwell.">
-          ${readings.map((reading, index) => {
+          ${result.readings.map((reading, index) => {
             const error = reading.samples.length ? reading.samples.reduce((sum, sample) => sum + Math.hypot(sample.x - reading.targetX, sample.y - reading.targetY), 0) / reading.samples.length : 999;
             const state = error <= 80 ? "good" : error <= 125 ? "warn" : "bad";
             return `<span class="map-point ${state}" style="--x:${targetPositions[index][0]}%;--y:${targetPositions[index][1]}%"><i>${index + 1}</i><b>${error >= 999 ? "No sample" : `${Math.round(error)} px`}</b></span>`;
@@ -416,6 +453,19 @@ function getChecks(): SavedCheck[] {
   catch { return []; }
 }
 
+function readCurrentResult(): SavedCheck | null {
+  try {
+    const value = JSON.parse(localStorage.getItem(CURRENT_RESULT_STORAGE_KEY) ?? "null") as Partial<SavedCheck> | null;
+    if (!value || typeof value.id !== "string" || typeof value.date !== "string" || !value.metrics || !Array.isArray(value.readings) || !value.setup) return null;
+    return value as SavedCheck;
+  } catch { return null; }
+}
+
+function saveCurrentResult(check: SavedCheck) {
+  try { localStorage.setItem(CURRENT_RESULT_STORAGE_KEY, JSON.stringify(check)); }
+  catch { /* The in-memory result remains available if local storage is unavailable. */ }
+}
+
 function saveCheck(check: SavedCheck) {
   const checks = [check, ...getChecks()].slice(0, 50);
   try { localStorage.setItem(isDemo ? DEMO_STORAGE_KEY : STORAGE_KEY, JSON.stringify(checks)); }
@@ -433,7 +483,12 @@ function renderHistory() {
   document.querySelector("#history-home")?.addEventListener("click", () => navigate("setup"));
   document.querySelectorAll<HTMLButtonElement>("[data-id]").forEach((button) => button.addEventListener("click", () => {
     const check = checks.find((item) => item.id === button.dataset.id);
-    if (check) { lastResult = check; readings = check.readings; navigate("result"); }
+    if (check) {
+      lastResult = check;
+      readings = check.readings;
+      if (!isDemo) saveCurrentResult(check);
+      navigate("result");
+    }
   }));
   document.querySelector("#clear-history")?.addEventListener("click", confirmClearHistory);
   announceAndFocus("Past checks");
@@ -451,7 +506,14 @@ function confirmClearHistory() {
     // Remove the record in the confirming click itself.  A method=dialog form
     // closes asynchronously, which previously made an immediate storage read
     // briefly observe stale history after the user had confirmed deletion.
-    if (cleared) localStorage.removeItem(isDemo ? DEMO_STORAGE_KEY : STORAGE_KEY);
+    if (cleared) {
+      localStorage.removeItem(isDemo ? DEMO_STORAGE_KEY : STORAGE_KEY);
+      if (!isDemo) {
+        localStorage.removeItem(CURRENT_RESULT_STORAGE_KEY);
+        lastResult = null;
+        readings = [];
+      }
+    }
     dialog.close(cleared ? "confirm" : "cancel");
     dialog.remove();
     navigate("history", true);
@@ -482,6 +544,8 @@ if (isDemo) {
   if (!location.hash) history.replaceState({ route: "result" }, "", `${location.pathname}${location.search}#result`);
   renderRoute(currentRoute(), true);
 } else {
+  lastResult = readCurrentResult();
+  if (lastResult) readings = lastResult.readings;
   if (!location.hash) history.replaceState({ route: "setup" }, "", `${location.pathname}${location.search}#setup`);
   renderRoute(currentRoute(), true);
 }
