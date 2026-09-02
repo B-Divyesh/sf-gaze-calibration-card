@@ -12,11 +12,12 @@ const releaseFixture = {
   ]
 };
 
-test.beforeEach(async ({ page }) => {
+async function stubLatestRelease(page: import("@playwright/test").Page) {
   await page.route("https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest", (route) => route.fulfill({ json: releaseFixture }));
-});
+}
 
 test("landing page has a complete accessible shell", async ({ page }) => {
+  await stubLatestRelease(page);
   const errors: string[] = [];
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto("http://127.0.0.1:4173/");
@@ -41,6 +42,7 @@ test("landing page has a complete accessible shell", async ({ page }) => {
 });
 
 test("every public route has one clear page structure and no serious accessibility issue", async ({ page }) => {
+  await stubLatestRelease(page);
   const routes = [
     ["/", "Gaze Calibration Card — compare pointer patterns"],
     ["/check/", "Gaze Calibration Card — compare your pointer"],
@@ -73,6 +75,7 @@ test("every public route has one clear page structure and no serious accessibili
 });
 
 test("every route keeps the shared home header and navigation at desktop and phone widths", async ({ page }) => {
+  await stubLatestRelease(page);
   const routes = ["/", "/check/", "/demo/", "/privacy/", "/terms/", "/404.html"];
   const navigation = [
     ["Demo", "/demo/"],
@@ -95,6 +98,7 @@ test("every route keeps the shared home header and navigation at desktop and pho
 });
 
 test("demo and policy pages have route-specific metadata", async ({ page }) => {
+  await stubLatestRelease(page);
   await page.goto("http://127.0.0.1:4173/demo/");
   await expect(page).toHaveTitle("Demo — Gaze Calibration Card");
   await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
@@ -111,12 +115,14 @@ test("demo and policy pages have route-specific metadata", async ({ page }) => {
 });
 
 test("the demo query path enters the isolated sample", async ({ page }) => {
+  await stubLatestRelease(page);
   await page.goto("http://127.0.0.1:4173/?demo=1");
   await expect(page).toHaveURL(/\/demo\/#result$/);
   await expect(page.getByText("Demo — sample data, nothing is saved")).toBeVisible();
 });
 
 test("leaving demo opens a reloadable real check route", async ({ page }) => {
+  await stubLatestRelease(page);
   await page.goto("http://127.0.0.1:4173/demo/");
   await page.getByRole("button", { name: "Start a new check" }).click();
   await expect(page).toHaveURL(/\/check\/#setup$/);
@@ -129,6 +135,7 @@ test("leaving demo opens a reloadable real check route", async ({ page }) => {
 
 test("phone first screen includes the three plain facts", async ({ page, isMobile }) => {
   test.skip(!isMobile, "Phone layout check");
+  await stubLatestRelease(page);
   await page.goto("http://127.0.0.1:4173/");
   const box = await page.locator(".plain-facts").boundingBox();
   expect((box?.y ?? Infinity) + (box?.height ?? Infinity)).toBeLessThanOrEqual(844);
@@ -146,6 +153,7 @@ test("deployment config defines security, caching, and a real 404", async () => 
 
 test("mobile controls meet the 44 pixel touch target", async ({ page, isMobile }) => {
   test.skip(!isMobile, "Mobile geometry check");
+  await stubLatestRelease(page);
   for (const route of ["/", "/check/", "/demo/", "/privacy/", "/terms/"]) {
     await page.goto(`http://127.0.0.1:4173${route}`);
     for (const control of await page.locator("a:visible, button:visible, summary:visible").all()) {
@@ -157,6 +165,7 @@ test("mobile controls meet the 44 pixel touch target", async ({ page, isMobile }
 
 test("phone pages reflow without horizontal scrolling at 200% text size", async ({ page, isMobile }) => {
   test.skip(!isMobile, "Text zoom is a phone layout check.");
+  await stubLatestRelease(page);
   for (const route of ["/", "/check/", "/demo/"]) {
     await page.goto(`http://127.0.0.1:4173${route}`);
     await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });

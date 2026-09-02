@@ -221,34 +221,64 @@ test("@claim:history-limit keeps no more than 50 local checks", async ({ page })
 });
 
 test("@claim:release-download selects every published platform branch and caches GitHub metadata for one hour", async ({ browser }) => {
-  // This behavior owns fresh browser contexts: a platform choice must never
-  // inherit another context's user-agent hints or release cache.
-  const contexts: import("@playwright/test").BrowserContext[] = [];
+  // Each simulated device owns and closes its own browser context. Keeping
+  // five device contexts open at once caused Chromium to crash late in the
+  // complete mobile run, which then made an unrelated deployment test fail.
   const releaseRoute = "https://api.github.com/repos/B-Divyesh/sf-gaze-calibration-card/releases/latest";
-  const openPlatform = async (platform: string, architecture: string, unavailable = false) => {
+  let activeSimulationContexts = 0;
+  let maximumSimulationContexts = 0;
+  const openSimulationContext = async () => {
     const context = await browser.newContext({ serviceWorkers: "block" });
-    contexts.push(context);
-    await context.addInitScript(({ platformName, architectureName, fail }) => {
-      Object.defineProperty(navigator, "userAgentData", {
-        configurable: true,
-        value: {
-          platform: platformName,
-          getHighEntropyValues: async () => {
-            if (fail) throw new Error("Architecture unavailable");
-            return { architecture: architectureName };
+    activeSimulationContexts += 1;
+    maximumSimulationContexts = Math.max(maximumSimulationContexts, activeSimulationContexts);
+    return context;
+  };
+  const closeSimulationContext = async (context: import("@playwright/test").BrowserContext) => {
+    await context.close();
+    activeSimulationContexts -= 1;
+  };
+  const openPlatform = async (platform: string, architecture: string, unavailable = false) => {
+    const context = await openSimulationContext();
+    try {
+      await context.addInitScript(({ platformName, architectureName, fail }) => {
+        Object.defineProperty(navigator, "userAgentData", {
+          configurable: true,
+          value: {
+            platform: platformName,
+            getHighEntropyValues: async () => {
+              if (fail) throw new Error("Architecture unavailable");
+              return { architecture: architectureName };
+            }
           }
+        });
+      }, { platformName: platform, architectureName: architecture, fail: unavailable });
+      await context.route(releaseRoute, (route) => route.fulfill({ json: releaseFixture }));
+      const page = await context.newPage();
+      await page.goto(`${siteUrl}/`);
+      return await (async () => {
+        if (platform === "Linux") {
+          await expect(page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-amd64\.AppImage$/);
+          await expect(page.locator("#platform-label")).toHaveText("Download for Linux");
+        } else if (platform === "macOS" && architecture === "arm") {
+          await expect(page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-aarch64\.dmg$/);
+          await expect(page.locator("#platform-label")).toHaveText("Download for Mac (Apple silicon)");
+        } else if (platform === "macOS" && architecture === "x86") {
+          await expect(page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-x64\.dmg$/);
+          await expect(page.locator("#platform-label")).toHaveText("Download for Mac (Intel)");
+        } else {
+          await expect(page.locator("#platform-label")).toHaveText("Choose a Mac download");
+          await expect(page.getByText("Mac architecture could not be detected:")).toBeVisible();
+          await expect(page.getByRole("link", { name: "Apple silicon", exact: true })).toHaveAttribute("href", /app-aarch64\.dmg$/);
+          await expect(page.getByRole("link", { name: "Intel", exact: true })).toHaveAttribute("href", /app-x64\.dmg$/);
         }
-      });
-    }, { platformName: platform, architectureName: architecture, fail: unavailable });
-    await context.route(releaseRoute, (route) => route.fulfill({ json: releaseFixture }));
-    const page = await context.newPage();
-    await page.goto(`${siteUrl}/`);
-    return { context, page };
+      })();
+    } finally {
+      await closeSimulationContext(context);
+    }
   };
 
+  const windows = await openSimulationContext();
   try {
-    const windows = await browser.newContext({ serviceWorkers: "block" });
-    contexts.push(windows);
     const page = await windows.newPage();
     let apiCalls = 0;
     const requests: string[] = [];
@@ -278,26 +308,17 @@ test("@claim:release-download selects every published platform branch and caches
     await expect(page.locator("#download-status")).toContainText("Version 0.1.1");
     expect(apiCalls).toBe(2);
 
-    const linux = await openPlatform("Linux", "x86");
-    await expect(linux.page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-amd64\.AppImage$/);
-    await expect(linux.page.locator("#platform-label")).toHaveText("Download for Linux");
-
-    const appleSilicon = await openPlatform("macOS", "arm");
-    await expect(appleSilicon.page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-aarch64\.dmg$/);
-    await expect(appleSilicon.page.locator("#platform-label")).toHaveText("Download for Mac (Apple silicon)");
-
-    const intelMac = await openPlatform("macOS", "x86");
-    await expect(intelMac.page.getByRole("link", { name: /Download the app/ })).toHaveAttribute("href", /app-x64\.dmg$/);
-    await expect(intelMac.page.locator("#platform-label")).toHaveText("Download for Mac (Intel)");
-
-    const unknownMac = await openPlatform("macOS", "", true);
-    await expect(unknownMac.page.locator("#platform-label")).toHaveText("Choose a Mac download");
-    await expect(unknownMac.page.getByText("Mac architecture could not be detected:")).toBeVisible();
-    await expect(unknownMac.page.getByRole("link", { name: "Apple silicon", exact: true })).toHaveAttribute("href", /app-aarch64\.dmg$/);
-    await expect(unknownMac.page.getByRole("link", { name: "Intel", exact: true })).toHaveAttribute("href", /app-x64\.dmg$/);
   } finally {
-    await Promise.all(contexts.map((context) => context.close()));
+    await closeSimulationContext(windows);
   }
+
+  await openPlatform("Linux", "x86");
+  await openPlatform("macOS", "arm");
+  await openPlatform("macOS", "x86");
+  await openPlatform("macOS", "", true);
+  // Exact regression for the mobile Chromium crash: every simulated device is
+  // isolated, and its context is closed before the next one opens.
+  expect(maximumSimulationContexts).toBe(1);
 });
 
 test("@claim:installer-checksum executes the shell installer and stops before use on a checksum mismatch", async () => {

@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { execFile } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 
 function auditedLines(document: string, name: string): string[] {
   const match = document.match(new RegExp(`<!-- ${name}:start -->\\n([\\s\\S]*?)<!-- ${name}:end -->`));
@@ -31,7 +26,6 @@ describe("copy audit", () => {
     expect(audit).toContain("{release version}");
     expect(audit).toContain("{build id}");
 
-    await execFileAsync(npm, ["run", "build:site"], { env: { ...process.env, GITHUB_SHA: "copy-audit-build" } });
     const output = (await Promise.all((await filesBelow("dist/site")).map((path) => readFile(path, "utf8").catch(() => "")))).join("\n");
     for (const copy of landing) expect(output, copy).toContain(copy);
     expect(output).toContain("Version ");

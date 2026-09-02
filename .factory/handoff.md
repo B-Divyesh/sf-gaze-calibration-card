@@ -1,28 +1,46 @@
-# Gaze Calibration Card — verification 10 handoff
+# Gaze Calibration Card — repair handoff
 
-## Status: FAIL — release blocked
+## Status: repaired
 
-Candidate `934bd97b906974ae82810cf0f8de8adf0c9de823` was independently verified against <https://gaze-calibration-card.sociobot.in/> on 2026-09-02 UTC. Do not accept this candidate until both required test commands are reliably green.
+This repair starts from verifier report commit `a58a78c43a028489b84907eb15c92a31dbf9ff3d` for candidate `934bd97b906974ae82810cf0f8de8adf0c9de823`.
 
-The live deployment itself matches the candidate (`Build 934bd97b9069`) and the product works end to end: one-click isolated demo, nine-target pointer comparison, keyboard path, local-only storage, opt-in notes, history clearing, standalone export, offline reload, and desktop packages all passed. All 18 registered claim tests passed when each manifest command was run independently.
+## What changed
 
-## Release-blocking defects
+- Moved the copy-audit production build out of Vitest's five-second test body. `npm test` now runs the cross-platform `pretest` build helper first with a deterministic copy-audit build id; the audit test only inspects that completed output.
+- Added `@regression:cold-copy-audit`, which locks the npm lifecycle and prevents the audit test from reintroducing a child-process build.
+- Removed the global Playwright page `beforeEach` from the site suite. The source-only deployment-config assertion no longer creates a mobile browser context.
+- Reworked the release-download test so each simulated platform owns and closes one context before the next opens. A runtime regression assertion proves the maximum is one context while it exercises Windows cache expiry plus Linux, Apple-silicon Mac, Intel Mac, and unknown-Mac fallbacks.
 
-1. `npm test` failed twice from the clean checkout. `tests/copy-audit.test.ts` invokes a production-site build but is limited by Vitest's 5-second default timeout. It timed out at 5.051 s and 5.038 s; with `--testTimeout=10000`, it passed in 8.912 s.
-2. `npm run test:e2e -- --reporter=line` exited 1 after 63 passing tests and 8 intentional skips because Chromium crashed before the mobile deployment-config test. The same test passes alone, but the full required suite is unstable.
+No product behavior, public copy, privacy policy, desktop package, or deployment class changed.
 
-## Verification summary
+## Verification
 
-- `npm ci`, lint, production build, cargo check/test, Lighthouse, release signature checks: pass.
-- Lighthouse mobile: 95/100, 99/100, 98/100 performance; 100 accessibility in every run.
-- Live audit: zero serious/critical axe findings and zero console/page errors across landing, check, demo, privacy, terms, and 404 routes; 390px layout and 200% text reflow pass.
-- Privacy/network: demo only made same-origin requests; the landing's documented GitHub Release API call is the sole external request. Camera, microphone, geolocation, payment, and USB are denied by policy.
-- Release: v0.1.6 contains all 11 expected artifacts. The Linux Debian package checksum matches `SHA256SUMS` and its extracted app stayed open for 12 seconds in Xvfb.
+### Clean Node install/cache
 
-See [verification-10.md](verification-10.md) for commands, full evidence, and severity detail.
+`npm ci --cache <new empty temporary directory>` installed 168 packages with 0 vulnerabilities.
 
-## Next steps
+- `npm test` — PASS: pretest production build plus 10 Vitest tests. The copy-audit assertion took 50 ms after the build completed.
+- `npm run lint` — PASS.
+- `npm run build` — PASS; produced `dist/app` and `dist/site`.
+- `npm run test:e2e -- --reporter=line` — PASS twice after the repair, including the final run with the one-context assertion: 64 passed, 8 intentional platform-path skips, 0 failures.
+- `npm run test:claims -- --reporter=line` — PASS: all 18 registered demo-based claims. The focused `@claim:release-download` regression also passed after the final isolation assertion.
+- `npm run test:lighthouse` — PASS: mobile scores 100/100 performance/accessibility in all three runs.
+- `npm run test:unsigned-builds` — PASS: release `v0.1.6` Windows EXE/MSI and both macOS bundles matched their digests and contained no publisher signature.
+- `npm audit --audit-level=high` — PASS: 0 vulnerabilities.
 
-1. Fix the copy-audit test deadline and verify `npm test` on a clean checkout.
-2. Stabilize the full Playwright mobile run, then rerun `npm run test:e2e -- --reporter=line` until it exits 0.
-3. Re-run the 18 exact `.factory/claims.json` commands and the production live audit after the repair.
+The browser suite covers desktop and 390 px mobile, keyboard-only completion, reduced motion/high contrast, axe serious/critical violations, demo isolation, same-origin privacy, first-visit offline reload/reset, response policy, and release selection.
+
+### Clean Rust caches
+
+The disposable verifier image initially lacked the normal Linux Tauri development headers, so I installed `libglib2.0-dev`, `libwebkit2gtk-4.1-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`, and `libxdo-dev` locally for verification only. With independently new `CARGO_HOME` and `CARGO_TARGET_DIR` directories for each command:
+
+- `cargo check --locked --manifest-path src-tauri/Cargo.toml` — PASS.
+- `cargo test --locked --manifest-path src-tauri/Cargo.toml` — PASS: library, binary, and doc harnesses (the crate defines 0 Rust tests).
+
+## Deployment and live verification
+
+The static deployment is rebuilt from `dist/site` after the repair commit. Live audit evidence and the final build identity are recorded after deployment in this handoff.
+
+## Known gaps / operator action
+
+None for this repair. The existing v0.1.6 desktop artifacts remain intentionally unsigned as documented; no native-app source changed, so a new package release is not required for this test-infrastructure repair.
